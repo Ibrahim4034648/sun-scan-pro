@@ -462,7 +462,11 @@ s="header">
             </div>
             <div class="form-group">
                 <label>موديل اللوح</label>
-                <input type="text" id="panelModel" placeholder="مثال: SP-400W-MONO">
+                <select id="panelModel" onchange="handleSelectChange('panelModel','newModelInput')">
+                    <option value="">-- اختر --</option>
+                    <option value="__new__">+ إضافة جديد</option>
+                </select>
+                <input type="text" id="newModelInput" class="new-input" placeholder="اسم الموديل الجديد">
             </div>
             <div class="form-group">
                 <label>الضمان</label>
