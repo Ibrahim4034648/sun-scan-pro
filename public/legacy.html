@@ -925,6 +925,7 @@ function getSelectValue(selectId, newInputId, fallback) {
             if (selectId === 'customerName' && !storedCustomers.includes(val)) storedCustomers.push(val);
             if (selectId === 'projectName' && !storedProjects.includes(val)) storedProjects.push(val);
             if (selectId === 'installLocation' && !storedLocations.includes(val)) storedLocations.push(val);
+            if (selectId === 'panelModel' && !storedModels.includes(val)) { storedModels.push(val); saveStoredModels(); populateModelSelect(); document.getElementById('panelModel').value = val; document.getElementById('newModelInput').style.display = 'none'; document.getElementById('newModelInput').value = ''; }
         }
         return val || fallback;
     }
