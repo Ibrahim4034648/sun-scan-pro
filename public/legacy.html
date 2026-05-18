@@ -577,6 +577,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateStats();
     renderTable();
     updateFilters();
+    populateModelSelect();
     document.getElementById('manualSerial').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') { e.preventDefault(); manualScan(); }
     });
