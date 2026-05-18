@@ -462,7 +462,11 @@ s="header">
             </div>
             <div class="form-group">
                 <label>موديل اللوح</label>
-                <input type="text" id="panelModel" placeholder="مثال: SP-400W-MONO">
+                <select id="panelModel" onchange="handleSelectChange('panelModel','newModelInput')">
+                    <option value="">-- اختر --</option>
+                    <option value="__new__">+ إضافة جديد</option>
+                </select>
+                <input type="text" id="newModelInput" class="new-input" placeholder="اسم الموديل الجديد">
             </div>
             <div class="form-group">
                 <label>الضمان</label>
@@ -553,6 +557,18 @@ const SCAN_DEBOUNCE_MS = 800;
 let storedCustomers = ['مؤسسة صلة'];
 let storedProjects = ['مشروع القويرة','مشروع الرحاب','مشروع فلك 1','مشروع فلك 2','مشروع فلك 3','مشروع فلك 4','مشروع فلك 5','مشروع فلك 6'];
 let storedLocations = ['حقل الألواح','غرفة التحكم'];
+let storedModels = ['SP-400W-MONO','SP-450W-MONO','SP-550W-BIFACIAL'];
+try { const m = JSON.parse(localStorage.getItem('solarWarrantyModels_v1')||'null'); if (Array.isArray(m) && m.length) storedModels = m; } catch(e) {}
+function saveStoredModels() { try { localStorage.setItem('solarWarrantyModels_v1', JSON.stringify(storedModels)); } catch(e) {} }
+function populateModelSelect() {
+    const sel = document.getElementById('panelModel'); if (!sel) return;
+    const cur = sel.value;
+    let html = '<option value="">-- اختر --</option>';
+    storedModels.forEach(m => { html += '<option value="' + escapeHtml(m) + '">' + escapeHtml(m) + '</option>'; });
+    html += '<option value="__new__">+ إضافة جديد</option>';
+    sel.innerHTML = html;
+    if (storedModels.includes(cur)) sel.value = cur;
+}
 
 // ===================== INIT =====================
 document.addEventListener('DOMContentLoaded', () => {
@@ -561,6 +577,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateStats();
     renderTable();
     updateFilters();
+    populateModelSelect();
     document.getElementById('manualSerial').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') { e.preventDefault(); manualScan(); }
     });
@@ -872,7 +889,7 @@ function manualScan() {
     const panel = {
         id: panels.length > 0 ? Math.max(...panels.map(p => p.id)) + 1 : 1,
         serial: val,
-        model: document.getElementById('panelModel').value.trim() || 'غير محدد',
+        model: getSelectValue('panelModel','newModelInput','غير محدد'),
         date: now.toLocaleDateString('ar-SA'),
         time: now.toLocaleTimeString('ar-SA', {hour:'2-digit', minute:'2-digit'}),
         timestamp: now.getTime(),
@@ -908,6 +925,7 @@ function getSelectValue(selectId, newInputId, fallback) {
             if (selectId === 'customerName' && !storedCustomers.includes(val)) storedCustomers.push(val);
             if (selectId === 'projectName' && !storedProjects.includes(val)) storedProjects.push(val);
             if (selectId === 'installLocation' && !storedLocations.includes(val)) storedLocations.push(val);
+            if (selectId === 'panelModel' && !storedModels.includes(val)) { storedModels.push(val); saveStoredModels(); populateModelSelect(); document.getElementById('panelModel').value = val; document.getElementById('newModelInput').style.display = 'none'; document.getElementById('newModelInput').value = ''; }
         }
         return val || fallback;
     }
