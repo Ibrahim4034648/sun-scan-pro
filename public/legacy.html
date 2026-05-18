@@ -557,6 +557,18 @@ const SCAN_DEBOUNCE_MS = 800;
 let storedCustomers = ['مؤسسة صلة'];
 let storedProjects = ['مشروع القويرة','مشروع الرحاب','مشروع فلك 1','مشروع فلك 2','مشروع فلك 3','مشروع فلك 4','مشروع فلك 5','مشروع فلك 6'];
 let storedLocations = ['حقل الألواح','غرفة التحكم'];
+let storedModels = ['SP-400W-MONO','SP-450W-MONO','SP-550W-BIFACIAL'];
+try { const m = JSON.parse(localStorage.getItem('solarWarrantyModels_v1')||'null'); if (Array.isArray(m) && m.length) storedModels = m; } catch(e) {}
+function saveStoredModels() { try { localStorage.setItem('solarWarrantyModels_v1', JSON.stringify(storedModels)); } catch(e) {} }
+function populateModelSelect() {
+    const sel = document.getElementById('panelModel'); if (!sel) return;
+    const cur = sel.value;
+    let html = '<option value="">-- اختر --</option>';
+    storedModels.forEach(m => { html += '<option value="' + escapeHtml(m) + '">' + escapeHtml(m) + '</option>'; });
+    html += '<option value="__new__">+ إضافة جديد</option>';
+    sel.innerHTML = html;
+    if (storedModels.includes(cur)) sel.value = cur;
+}
 
 // ===================== INIT =====================
 document.addEventListener('DOMContentLoaded', () => {
