@@ -1,0 +1,1201 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#f97316">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>نظام إدارة ضمان الألواح الشمسية</title>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        :root {
+            --bg: #f0f1f3; --card-bg: #ffffff; --text-primary: #1a1a2e; --text-secondary: #6b7280;
+            --border: #e5e7eb; --solar-orange: #f97316; --solar-orange-light: #fff7ed; --solar-orange-dark: #ea580c;
+            --accent-blue: #0ea5e9; --success: #10b981; --success-light: #d1fae5;
+            --danger: #ef4444; --danger-light: #fee2e2; --warning: #f59e0b; --warning-light: #fef3c7;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05); --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 15px rgba(0,0,0,0.1); --radius: 12px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg); color: var(--text-primary); line-height: 1.5; min-height: 100vh;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 12px; padding-bottom: 80px; }
+
+        .header {
+            background: var(--card-bg); border-bottom: 1px solid var(--border);
+            padding: 12px 16px; display: flex; align-items: center; justify-content: space-between;
+            position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow-sm);
+        }
+        .header-left { display: flex; align-items: center; gap: 10px; }
+        .logo-icon {
+            width: 38px; height: 38px; background: linear-gradient(135deg, var(--solar-orange), var(--solar-orange-dark));
+            border-radius: 10px; display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 18px; flex-shrink: 0;
+        }
+        .header-title { font-size: 15px; font-weight: 800; }
+        .header-subtitle { font-size: 11px; color: var(--text-secondary); }
+        .header-actions { display: flex; gap: 6px; }
+
+        .stats-grid {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 12px 0;
+        }
+        @media (max-width: 640px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+        .stat-card {
+            background: var(--card-bg); border-radius: var(--radius); padding: 14px;
+            border: 1px solid var(--border); box-shadow: var(--shadow-sm);
+            display: flex; align-items: center; gap: 10px;
+        }
+        .stat-icon {
+            width: 40px; height: 40px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;
+        }
+        .stat-icon.orange { background: var(--solar-orange-light); color: var(--solar-orange); }
+        .stat-icon.blue { background: var(--accent-blue-light); color: var(--accent-blue); }
+        .stat-icon.green { background: var(--success-light); color: var(--success); }
+        .stat-icon.red { background: var(--danger-light); color: var(--danger); }
+        .stat-info h3 { font-size: 20px; font-weight: 800; }
+        .stat-info p { font-size: 11px; color: var(--text-secondary); font-weight: 600; }
+
+        .scanner-section, .form-section, .table-section {
+            background: var(--card-bg); border-radius: var(--radius);
+            border: 1px solid var(--border); padding: 16px;
+            box-shadow: var(--shadow-sm); margin-bottom: 12px;
+        }
+        .section-title {
+            font-size: 13px; font-weight: 700; margin-bottom: 12px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .scanner-wrapper {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+        }
+        @media (max-width: 768px) { .scanner-wrapper { grid-template-columns: 1fr; } }
+
+        .scanner-box {
+            background: #0f0f1a; border-radius: var(--radius);
+            overflow: hidden; position: relative; min-height: 280px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .scanner-placeholder {
+            color: #6b7280; text-align: center; padding: 30px;
+        }
+        .scanner-placeholder i { font-size: 40px; margin-bottom: 10px; display: block; color: #374151; }
+        .scanner-placeholder p { font-size: 14px; }
+        .scanner-placeholder p.small { font-size: 12px; margin-top: 4px; color: #4b5563; }
+
+        .scan-frame {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 260px; height: 160px;
+            border: 2px solid rgba(249,115,22,0.6);
+            border-radius: 8px; pointer-events: none; z-index: 5;
+        }
+        .scan-frame::before, .scan-frame::after {
+            content: ''; position: absolute; width: 20px; height: 20px;
+            border-color: var(--solar-orange); border-style: solid;
+        }
+        .scan-frame::before { top: -2px; left: -2px; border-width: 4px 0 0 4px; }
+        .scan-frame::after { bottom: -2px; right: -2px; border-width: 0 4px 4px 0; }
+        .scan-frame-label {
+            position: absolute; bottom: -28px; left: 50%;
+            transform: translateX(-50%); color: var(--solar-orange);
+            font-size: 11px; font-weight: 700; white-space: nowrap;
+            background: rgba(0,0,0,0.6); padding: 2px 10px; border-radius: 10px;
+        }
+        .scan-laser {
+            position: absolute; top: 0; left: 0; right: 0;
+            height: 2px; background: var(--solar-orange);
+            box-shadow: 0 0 8px var(--solar-orange);
+            animation: laserScan 2s linear infinite;
+            opacity: 0.7; pointer-events: none;
+        }
+        @keyframes laserScan {
+            0% { top: 0; opacity: 0; } 10% { opacity: 0.7; }
+            90% { opacity: 0.7; } 100% { top: 100%; opacity: 0; }
+        }
+        .scan-status-bar {
+            position: absolute; top: 10px; right: 10px;
+            background: rgba(0,0,0,0.7); color: white;
+            padding: 4px 12px; border-radius: 20px;
+            font-size: 11px; font-weight: 600;
+            display: flex; align-items: center; gap: 6px; z-index: 10;
+        }
+        .scan-status-bar .dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--success); animation: pulse 1.5s infinite;
+        }
+        .scan-status-bar .dot.error { background: var(--danger); animation: none; }
+        .scan-status-bar .dot.warning { background: var(--warning); animation: none; }
+        .scan-status-bar .dot.idle { background: #6b7280; animation: none; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+        .scanner-controls { display: flex; flex-direction: column; gap: 10px; }
+        .manual-input-group { display: flex; gap: 8px; }
+        .manual-input-group input {
+            flex: 1; padding: 12px 14px; border: 2px solid var(--border);
+            border-radius: 10px; font-size: 16px; outline: none;
+            font-family: 'Courier New', monospace; font-weight: 700;
+            transition: all 0.2s; background: var(--card-bg);
+        }
+        .manual-input-group input:focus { border-color: var(--solar-orange); }
+        .manual-input-group input.scan-success { border-color: var(--success); background: var(--success-light); }
+        .manual-input-group input.scan-error { border-color: var(--danger); background: var(--danger-light); }
+        .scanner-options { display: flex; flex-wrap: wrap; gap: 6px; }
+        .scanner-options label {
+            display: flex; align-items: center; gap: 5px;
+            font-size: 12px; color: var(--text-secondary); cursor: pointer;
+            padding: 6px 10px; background: var(--bg); border-radius: 8px; border: 1px solid var(--border);
+        }
+        .scanner-options input[type="checkbox"] { accent-color: var(--solar-orange); width: 16px; height: 16px; }
+        .camera-select {
+            padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px;
+            font-size: 13px; background: var(--card-bg); outline: none; width: 100%;
+        }
+        .scanner-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center;
+            gap: 6px; padding: 10px 16px; border-radius: 10px; border: none;
+            font-size: 13px; font-weight: 700; cursor: pointer;
+            transition: all 0.2s; white-space: nowrap; min-height: 44px;
+        }
+        .btn-primary { background: var(--solar-orange); color: white; }
+        .btn-primary:hover { background: var(--solar-orange-dark); }
+        .btn-secondary { background: var(--bg); color: var(--text-primary); border: 1px solid var(--border); }
+        .btn-secondary:hover { background: var(--border); }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-danger:hover { background: #dc2626; }
+        .btn-blue { background: var(--accent-blue); color: white; }
+        .btn-blue:hover { background: #0284c7; }
+        .btn-dark { background: #1f2937; color: white; }
+        .btn-dark:hover { background: #111827; }
+        .btn-sm { padding: 8px 12px; font-size: 12px; min-height: 36px; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .form-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;
+        }
+        .form-group label {
+            display: block; font-size: 11px; font-weight: 700;
+            color: var(--text-secondary); margin-bottom: 5px;
+        }
+        .form-group select, .form-group input, .form-group textarea {
+            width: 100%; padding: 10px 12px; border: 1px solid var(--border);
+            border-radius: 10px; font-size: 14px; background: var(--card-bg);
+            outline: none; transition: all 0.2s;
+        }
+        .form-group select:focus, .form-group input:focus, .form-group textarea:focus {
+            border-color: var(--solar-orange); box-shadow: 0 0 0 3px rgba(249,115,22,0.1);
+        }
+        .form-group textarea { resize: vertical; min-height: 50px; }
+        .form-group .new-input { margin-top: 6px; display: none; }
+
+        .table-toolbar {
+            display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+            margin-bottom: 12px; justify-content: space-between;
+        }
+        .search-box {
+            position: relative; flex: 1; min-width: 180px; max-width: 350px;
+        }
+        .search-box i {
+            position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+            color: var(--text-secondary); font-size: 13px;
+        }
+        .search-box input {
+            width: 100%; padding: 10px 12px 10px 36px;
+            border: 1px solid var(--border); border-radius: 10px;
+            font-size: 13px; outline: none; background: var(--card-bg);
+        }
+        .search-box input:focus { border-color: var(--solar-orange); }
+        .filter-group { display: flex; gap: 6px; flex-wrap: wrap; }
+        .filter-group select {
+            padding: 8px 10px; border: 1px solid var(--border);
+            border-radius: 8px; font-size: 12px; background: var(--card-bg); outline: none;
+        }
+        .table-container { overflow-x: auto; border-radius: 10px; border: 1px solid var(--border); }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        thead { background: var(--bg); }
+        th {
+            padding: 10px 12px; text-align: right; font-weight: 700;
+            color: var(--text-secondary); font-size: 10px;
+            border-bottom: 2px solid var(--border); cursor: pointer;
+            user-select: none; white-space: nowrap;
+        }
+        th:hover { color: var(--solar-orange); }
+        th .sort-icon { margin-right: 4px; font-size: 9px; opacity: 0.5; }
+        th.sorted .sort-icon { opacity: 1; color: var(--solar-orange); }
+        td {
+            padding: 10px 12px; border-bottom: 1px solid var(--border);
+            color: var(--text-primary); font-weight: 500;
+        }
+        tbody tr { transition: background 0.15s; }
+        tbody tr:hover { background: var(--bg); }
+        tbody tr.new-row { animation: highlightRow 2s ease forwards; }
+        tbody tr.duplicate { background: var(--danger-light); }
+        @keyframes highlightRow { 0%{background:var(--success-light)} 100%{background:transparent} }
+        .serial-cell { font-family: 'Courier New', monospace; font-weight: 700; font-size: 13px; }
+        .action-btn {
+            width: 28px; height: 28px; border-radius: 6px;
+            border: none; cursor: pointer; display: flex;
+            align-items: center; justify-content: center;
+            font-size: 11px; background: var(--danger-light); color: var(--danger);
+        }
+        .action-btn:hover { background: var(--danger); color: white; }
+        .empty-state {
+            text-align: center; padding: 50px 20px; color: var(--text-secondary); font-size: 13px;
+        }
+        .empty-state i { font-size: 40px; margin-bottom: 10px; display: block; opacity: 0.3; }
+
+        .toast-container {
+            position: fixed; top: 70px; left: 16px; z-index: 1000;
+            display: flex; flex-direction: column; gap: 8px;
+            max-width: calc(100vw - 32px);
+        }
+        .toast {
+            background: var(--card-bg); border-radius: var(--radius);
+            padding: 12px 16px; box-shadow: var(--shadow-lg);
+            border-right: 4px solid var(--success); display: flex;
+            align-items: center; gap: 10px; min-width: 260px;
+            animation: slideIn 0.3s ease, fadeOut 0.3s ease 2.7s forwards;
+            font-size: 13px;
+        }
+        .toast.error { border-right-color: var(--danger); }
+        .toast.warning { border-right-color: var(--warning); }
+        .toast i { font-size: 18px; flex-shrink: 0; }
+        @keyframes slideIn { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes fadeOut { to { opacity: 0; transform: translateX(-100%); } }
+
+        .footer-bar {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: var(--card-bg); border-top: 1px solid var(--border);
+            padding: 10px 16px; display: flex; justify-content: space-between;
+            align-items: center; z-index: 90; box-shadow: var(--shadow-sm);
+            padding-bottom: max(10px, env(safe-area-inset-bottom));
+        }
+        .footer-left { font-size: 12px; color: var(--text-secondary); }
+        .footer-right { display: flex; gap: 6px; }
+
+        .camera-error {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.85); color: white;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            padding: 30px; text-align: center; z-index: 20;
+        }
+        .camera-error i { font-size: 48px; color: var(--danger); margin-bottom: 16px; }
+        .camera-error h3 { font-size: 16px; margin-bottom: 8px; }
+        .camera-error p { font-size: 13px; color: #9ca3af; margin-bottom: 16px; }
+
+        @media (max-width: 640px) {
+            .header { padding: 10px 12px; }
+            .header-title { font-size: 14px; }
+            .stats-grid { gap: 8px; }
+            .stat-card { padding: 12px; gap: 8px; }
+            .stat-icon { width: 36px; height: 36px; font-size: 16px; }
+            .stat-info h3 { font-size: 18px; }
+            .scanner-section, .form-section, .table-section { padding: 12px; }
+            .table-toolbar { flex-direction: column; align-items: stretch; }
+            .search-box { max-width: none; }
+            .filter-group { width: 100%; }
+            .filter-group select { flex: 1; }
+            .footer-bar { padding: 8px 12px; flex-wrap: wrap; gap: 6px; }
+            .footer-right { width: 100%; justify-content: stretch; }
+            .footer-right .btn { flex: 1; }
+            .scanner-actions .btn { flex: 1; }
+        }
+    </style>
+</head>
+<body>
+<div clas
+    <!-- Permission Request Overlay -->
+    <div id="permissionOverlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:linear-gradient(135deg,#1a1a2e 0%,#2d2d44 100%);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;text-align:center;color:white;">
+        <div style="width:80px;height:80px;background:linear-gradient(135deg,#f97316,#ea580c);border-radius:20px;display:flex;align-items:center;justify-content:center;margin-bottom:24px;font-size:36px;">☀</div>
+        <h1 style="font-size:22px;font-weight:800;margin-bottom:8px;">نظام إدارة ضمان الألواح الشمسية</h1>
+        <p style="font-size:14px;color:#9ca3af;margin-bottom:32px;max-width:320px;">التطبيق يحتاج إلى الوصول للكاميرا لمسح الباركود والميكروفون للتأكد من عمل الجهاز</p>
+
+        <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:20px;margin-bottom:24px;max-width:360px;width:100%;border:1px solid rgba(255,255,255,0.1);">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+                <div style="width:40px;height:40px;background:rgba(249,115,22,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#f97316;font-size:18px;"><i class="fas fa-camera"></i></div>
+                <div style="text-align:right;flex:1;">
+                    <div style="font-size:14px;font-weight:700;">الكاميرا</div>
+                    <div style="font-size:12px;color:#9ca3af;">لقراءة الباركود على الألواح الشمسية</div>
+                </div>
+                <div id="permCameraStatus" style="font-size:12px;color:#f59e0b;font-weight:600;">مطلوب</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+                <div style="width:40px;height:40px;background:rgba(16,185,129,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#10b981;font-size:18px;"><i class="fas fa-hdd"></i></div>
+                <div style="text-align:right;flex:1;">
+                    <div style="font-size:14px;font-weight:700;">التخزين المحلي</div>
+                    <div style="font-size:12px;color:#9ca3af;">لحفظ البيانات على الجهاز</div>
+                </div>
+                <div id="permStorageStatus" style="font-size:12px;color:#f59e0b;font-weight:600;">مطلوب</div>
+            </div>
+        </div>
+
+        <button id="grantBtn" onclick="requestPermissions()" style="background:#f97316;color:white;border:none;padding:14px 40px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;transition:all 0.2s;width:100%;max-width:300px;margin-bottom:12px;">
+            <i class="fas fa-check-circle"></i> السماح بالوصول
+        </button>
+        <button onclick="skipPermissions()" style="background:transparent;color:#9ca3af;border:none;padding:10px;font-size:13px;cursor:pointer;">
+            تخطي (وضع الإدخال اليدوي فقط)
+        </button>
+        <p id="permError" style="color:#ef4444;font-size:12px;margin-top:12px;display:none;"></p>
+    </div>
+s="header">
+    <div class="header-left">
+        <div class="logo-icon"><i class="fas fa-solar-panel"></i></div>
+        <div>
+            <div class="header-title">نظام إدارة ضمان الألواح الشمسية</div>
+            <div class="header-subtitle">مسح · تخزين · تصدير</div>
+        </div>
+    </div>
+    <div class="header-actions">
+        <button class="btn btn-secondary btn-sm" onclick="backupData()"><i class="fas fa-download"></i></button>
+        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('importFile').click()"><i class="fas fa-upload"></i></button>
+        <input type="file" id="importFile" accept=".json" style="display:none" onchange="restoreData(event)">
+        <button class="btn btn-danger btn-sm" onclick="clearAllData()"><i class="fas fa-trash"></i></button>
+    </div>
+</div>
+
+<div class="container">
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon orange"><i class="fas fa-solar-panel"></i></div>
+            <div class="stat-info"><h3 id="statTotal">0</h3><p>إجمالي الألواح</p></div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon blue"><i class="fas fa-calendar-day"></i></div>
+            <div class="stat-info"><h3 id="statToday">0</h3><p>المسجلة اليوم</p></div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon red"><i class="fas fa-exclamation-triangle"></i></div>
+            <div class="stat-info"><h3 id="statDuplicates">0</h3><p>مكررة</p></div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon green"><i class="fas fa-shield-alt"></i></div>
+            <div class="stat-info"><h3 id="statActive">0</h3><p>ضمانات نشطة</p></div>
+        </div>
+    </div>
+
+    <div class="scanner-section">
+        <div class="section-title"><i class="fas fa-barcode"></i> ماسح الباركود / QR</div>
+        <div class="scanner-wrapper">
+            <div class="scanner-box" id="scannerBox">
+                <div class="scanner-placeholder" id="scannerPlaceholder">
+                    <i class="fas fa-camera"></i>
+                    <p>الماسح جاهز</p>
+                    <p class="small">اختر الكاميرا واضغط تشغيل</p>
+                </div>
+                <div class="scan-frame" id="scanFrame" style="display:none">
+                    <div class="scan-laser"></div>
+                    <div class="scan-frame-label">وجّه الباركود هنا</div>
+                </div>
+                <div class="scan-status-bar" id="scanStatusBar" style="display:none">
+                    <span class="dot" id="statusDot"></span>
+                    <span id="statusText">جاري التشغيل...</span>
+                </div>
+            </div>
+            <div class="scanner-controls">
+                <div class="manual-input-group">
+                    <input type="text" id="manualSerial" placeholder="الرقم التسلسلي..."
+                        autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+                    <button class="btn btn-primary" onclick="manualScan()" id="addBtn"><i class="fas fa-plus"></i> إضافة</button>
+                </div>
+                <select class="camera-select" id="cameraSelect"><option value="">اختر الكاميرا...</option></select>
+                <div class="scanner-options">
+                    <label><input type="checkbox" id="continuousScan" checked> مسح متواصل</label>
+                    <label><input type="checkbox" id="soundEnabled" checked> صوت</label>
+                    <label><input type="checkbox" id="vibrateEnabled" checked> اهتزاز</label>
+                </div>
+                <div class="scanner-actions">
+                    <button class="btn btn-primary" id="startBtn" onclick="startScanner()" style="flex:1"><i class="fas fa-play"></i> تشغيل</button>
+                    <button class="btn btn-secondary" id="stopBtn" onclick="stopScanner()" style="flex:1;display:none"><i class="fas fa-stop"></i> إيقاف</button>
+                    <button class="btn btn-dark" id="torchBtn" onclick="toggleTorch()" style="display:none"><i class="fas fa-lightbulb"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-section">
+        <div class="section-title"><i class="fas fa-edit"></i> تفاصيل التركيب</div>
+        <div class="form-grid">
+            <div class="form-group">
+                <label>العميل</label>
+                <select id="customerName" onchange="handleSelectChange('customerName','newCustomerInput')">
+                    <option value="">-- اختر --</option>
+                    <option value="مؤسسة صلة" selected>مؤسسة صلة</option>
+                    <option value="__new__">+ إضافة جديد</option>
+                </select>
+                <input type="text" id="newCustomerInput" class="new-input" placeholder="اسم العميل الجديد">
+            </div>
+            <div class="form-group">
+                <label>المشروع</label>
+                <select id="projectName" onchange="handleSelectChange('projectName','newProjectInput')">
+                    <option value="">-- اختر --</option>
+                    <option value="مشروع القويرة">مشروع القويرة</option>
+                    <option value="مشروع الرحاب">مشروع الرحاب</option>
+                    <option value="مشروع فلك 1">مشروع فلك 1</option>
+                    <option value="مشروع فلك 2">مشروع فلك 2</option>
+                    <option value="مشروع فلك 3">مشروع فلك 3</option>
+                    <option value="مشروع فلك 4">مشروع فلك 4</option>
+                    <option value="مشروع فلك 5">مشروع فلك 5</option>
+                    <option value="مشروع فلك 6">مشروع فلك 6</option>
+                    <option value="__new__">+ إضافة جديد</option>
+                </select>
+                <input type="text" id="newProjectInput" class="new-input" placeholder="اسم المشروع الجديد">
+            </div>
+            <div class="form-group">
+                <label>الموقع</label>
+                <select id="installLocation" onchange="handleSelectChange('installLocation','newLocationInput')">
+                    <option value="">-- اختر --</option>
+                    <option value="حقل الألواح" selected>حقل الألواح</option>
+                    <option value="غرفة التحكم">غرفة التحكم</option>
+                    <option value="__new__">+ إضافة جديد</option>
+                </select>
+                <input type="text" id="newLocationInput" class="new-input" placeholder="الموقع الجديد">
+            </div>
+            <div class="form-group">
+                <label>موديل اللوح</label>
+                <input type="text" id="panelModel" placeholder="مثال: SP-400W-MONO">
+            </div>
+            <div class="form-group">
+                <label>الضمان</label>
+                <select id="warrantyPeriod">
+                    <option value="1">1 سنة</option>
+                    <option value="2">2 سنة</option>
+                    <option value="3">3 سنوات</option>
+                    <option value="4">4 سنوات</option>
+                    <option value="5">5 سنوات</option>
+                    <option value="6">6 سنوات</option>
+                    <option value="7">7 سنوات</option>
+                    <option value="8">8 سنوات</option>
+                    <option value="9">9 سنوات</option>
+                    <option value="10" selected>10 سنوات</option>
+                </select>
+            </div>
+            <div class="form-group" style="grid-column:1/-1">
+                <label>ملاحظات</label>
+                <textarea id="notes" placeholder="ملاحظات إضافية..."></textarea>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-section">
+        <div class="table-toolbar">
+            <h3 class="section-title" style="margin:0"><i class="fas fa-list"></i> الألواح المسجلة</h3>
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchInput" placeholder="بحث في جميع الحقول..." oninput="renderTable()">
+            </div>
+            <div class="filter-group">
+                <select id="filterDate" onchange="renderTable()"><option value="">كل التواريخ</option></select>
+                <select id="filterCustomer" onchange="renderTable()"><option value="">كل العملاء</option></select>
+                <select id="filterProject" onchange="renderTable()"><option value="">كل المشاريع</option></select>
+                <select id="filterLocation" onchange="renderTable()"><option value="">كل المواقع</option></select>
+            </div>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th onclick="sortTable('id')"># <span class="sort-icon"><i class="fas fa-sort"></i></span></th>
+                        <th onclick="sortTable('serial')">التسلسلي <span class="sort-icon"><i class="fas fa-sort"></i></span></th>
+                        <th onclick="sortTable('model')">الموديل <span class="sort-icon"><i class="fas fa-sort"></i></span></th>
+                        <th onclick="sortTable('warranty')">الضمان <span class="sort-icon"><i class="fas fa-sort"></i></span></th>
+                        <th onclick="sortTable('date')">التاريخ <span class="sort-icon"><i class="fas fa-sort"></i></span></th>
+                        <th onclick="sortTable('location')">الموقع <span class="sort-icon"><i class="fas fa-sort"></i></span></th>
+                        <th onclick="sortTable('project')">المشروع <span class="sort-icon"><i class="fas fa-sort"></i></span></th>
+                        <th onclick="sortTable('customer')">العميل <span class="sort-icon"><i class="fas fa-sort"></i></span></th>
+                        <th>ملاحظة</th>
+                        <th style="width:40px"></th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr><td colspan="10" class="empty-state"><i class="fas fa-inbox"></i><p>لا توجد ألواح مسجلة</p></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="footer-bar">
+    <div class="footer-left">
+        <span id="footerStatus">جاهز</span> · <span id="footerCount">0 عنصر</span>
+    </div>
+    <div class="footer-right">
+        <button class="btn btn-secondary btn-sm" onclick="backupData()"><i class="fas fa-file-code"></i> JSON</button>
+        <button class="btn btn-blue btn-sm" onclick="exportExcel()"><i class="fas fa-file-excel"></i> Excel</button>
+        <button class="btn btn-primary btn-sm" onclick="exportPDF()"><i class="fas fa-file-pdf"></i> PDF</button>
+    </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ===================== STATE =====================
+let panels = [];
+let sortCol = 'id';
+let sortDir = 'desc';
+let html5QrCode = null;
+let isScanning = false;
+let duplicateSerials = new Set();
+let scannerCleanupPromise = null;
+let currentVideoTrack = null;
+let lastScanTime = 0;
+const SCAN_DEBOUNCE_MS = 800;
+
+let storedCustomers = ['مؤسسة صلة'];
+let storedProjects = ['مشروع القويرة','مشروع الرحاب','مشروع فلك 1','مشروع فلك 2','مشروع فلك 3','مشروع فلك 4','مشروع فلك 5','مشروع فلك 6'];
+let storedLocations = ['حقل الألواح','غرفة التحكم'];
+
+// ===================== INIT =====================
+document.addEventListener('DOMContentLoaded', () => {
+    loadFromStorage();
+    populateCameras();
+    updateStats();
+    renderTable();
+    updateFilters();
+    document.getElementById('manualSerial').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); manualScan(); }
+    });
+    keepScreenAwake();
+});
+
+function keepScreenAwake() {
+    if ('wakeLock' in navigator) {
+        const req = () => navigator.wakeLock.request('screen').catch(()=>{});
+        req();
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') req();
+        });
+    }
+}
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ===================== STORAGE =====================
+function saveToStorage() {
+    try { localStorage.setItem('solarWarrantyPanels_v2', JSON.stringify(panels)); } catch(e) {}
+}
+function loadFromStorage() {
+    try {
+        const data = localStorage.getItem('solarWarrantyPanels_v2');
+        if (data) panels = JSON.parse(data);
+    } catch(e) { panels = []; }
+}
+function clearAllData() {
+    if (!panels.length) return;
+    if (!confirm('هل أنت متأكد من حذف جميع البيانات؟ لا يمكن التراجع.')) return;
+    panels = []; duplicateSerials.clear();
+    saveToStorage(); updateStats(); renderTable(); updateFilters();
+    showToast('تم مسح جميع البيانات', 'warning');
+}
+function backupData() {
+    const blob = new Blob([JSON.stringify(panels, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'backup-' + new Date().toISOString().slice(0,10) + '.json';
+    a.click(); URL.revokeObjectURL(url);
+    showToast('تم التنزيل', 'success');
+}
+function restoreData(e) {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+        try {
+            const data = JSON.parse(ev.target.result);
+            if (Array.isArray(data)) {
+                panels = data; saveToStorage(); updateStats(); renderTable(); updateFilters();
+                showToast('تم الاستعادة بنجاح', 'success');
+            } else { showToast('ملف غير صالح', 'error'); }
+        } catch(err) { showToast('خطأ في القراءة', 'error'); }
+    };
+    reader.readAsText(file); e.target.value = '';
+}
+
+// ===================== CAMERA / SCANNER =====================
+async function populateCameras() {
+    const sel = document.getElementById('cameraSelect');
+    try {
+        const devices = await Html5Qrcode.getCameras();
+        sel.innerHTML = '<option value="">اختر الكاميرا...</option>';
+        const back = [], other = [];
+        devices.forEach((d, i) => {
+            const label = (d.label || '').toLowerCase();
+            const opt = document.createElement('option');
+            opt.value = d.id;
+            opt.textContent = d.label || ('كاميرا ' + (i+1));
+            if (label.includes('back') || label.includes('rear') || label.includes('environment')) back.push(opt);
+            else other.push(opt);
+        });
+        back.forEach(o => sel.appendChild(o));
+        other.forEach(o => sel.appendChild(o));
+        if (back.length) sel.value = back[0].value;
+        else if (other.length) sel.value = other[0].value;
+    } catch(err) {
+        sel.innerHTML = '<option value="">لا توجد كاميرات</option>';
+    }
+}
+
+async function startScanner() {
+    if (scannerCleanupPromise) {
+        try { await scannerCleanupPromise; } catch(e){}
+        scannerCleanupPromise = null;
+    }
+    if (html5QrCode || isScanning) {
+        await forceCleanupScanner();
+        await delay(800);
+    }
+
+    let cameraId = document.getElementById('cameraSelect').value;
+    if (!cameraId) {
+        try {
+            const devices = await Html5Qrcode.getCameras();
+            const backCam = devices.find(d => {
+                const l = (d.label || '').toLowerCase();
+                return l.includes('back') || l.includes('rear') || l.includes('environment');
+            });
+            if (backCam) { cameraId = backCam.id; document.getElementById('cameraSelect').value = backCam.id; }
+            else if (devices.length) { cameraId = devices[0].id; document.getElementById('cameraSelect').value = devices[0].id; }
+        } catch(e) {}
+    }
+    if (!cameraId) {
+        showCameraError('لم يتم اختيار كاميرا', 'يرجى اختيار كاميرا من القائمة أو السماح بالوصول للكاميرا.');
+        return;
+    }
+
+    updateScannerUI('starting');
+    const box = document.getElementById('scannerBox');
+    box.innerHTML = '';
+    const statusBar = document.createElement('div');
+    statusBar.className = 'scan-status-bar';
+    statusBar.id = 'scanStatusBar';
+    statusBar.innerHTML = '<span class="dot warning" id="statusDot"></span><span id="statusText">جاري التشغيل...</span>';
+    box.appendChild(statusBar);
+    const frame = document.createElement('div');
+    frame.className = 'scan-frame';
+    frame.id = 'scanFrame';
+    frame.innerHTML = '<div class="scan-laser"></div><div class="scan-frame-label">وجّه الباركود هنا</div>';
+    box.appendChild(frame);
+
+    const formatsToSupport = [
+        Html5QrcodeSupportedFormats.QR_CODE,
+        Html5QrcodeSupportedFormats.CODE_128,
+        Html5QrcodeSupportedFormats.CODE_39,
+        Html5QrcodeSupportedFormats.CODE_93,
+        Html5QrcodeSupportedFormats.EAN_13,
+        Html5QrcodeSupportedFormats.EAN_8,
+        Html5QrcodeSupportedFormats.UPC_A,
+        Html5QrcodeSupportedFormats.UPC_E,
+        Html5QrcodeSupportedFormats.ITF,
+        Html5QrcodeSupportedFormats.PDF_417,
+        Html5QrcodeSupportedFormats.DATA_MATRIX,
+        Html5QrcodeSupportedFormats.AZTEC,
+        Html5QrcodeSupportedFormats.CODABAR
+    ];
+
+    html5QrCode = new Html5Qrcode('scannerBox', { formatsToSupport });
+
+    try {
+        await html5QrCode.start(
+            cameraId,
+            { fps: 30, qrbox: { width: 280, height: 180 }, aspectRatio: 1.777, disableFlip: false },
+            onScanSuccess, onScanFailure
+        );
+        isScanning = true;
+        updateScannerUI('scanning');
+        try {
+            const videoEl = document.querySelector('#scannerBox video');
+            if (videoEl && videoEl.srcObject) {
+                const tracks = videoEl.srcObject.getVideoTracks();
+                if (tracks.length) currentVideoTrack = tracks[0];
+            }
+        } catch(e) {}
+        showToast('تم تشغيل الماسح', 'success');
+    } catch(err) {
+        console.error('Scanner start error:', err);
+        handleCameraError(err);
+        await forceCleanupScanner();
+    }
+}
+
+async function stopScanner() {
+    if (scannerCleanupPromise) return;
+    scannerCleanupPromise = forceCleanupScanner();
+    await scannerCleanupPromise;
+    scannerCleanupPromise = null;
+}
+
+async function forceCleanupScanner() {
+    isScanning = false; currentVideoTrack = null;
+    if (html5QrCode) {
+        try { await html5QrCode.stop(); } catch(e){}
+        try { await html5QrCode.clear(); } catch(e){}
+        html5QrCode = null;
+    }
+    try {
+        document.querySelectorAll('video').forEach(v => {
+            if (v.srcObject) { v.srcObject.getTracks().forEach(t => t.stop()); v.srcObject = null; }
+        });
+    } catch(e){}
+    await delay(600);
+    const box = document.getElementById('scannerBox');
+    box.innerHTML = '<div class="scanner-placeholder" id="scannerPlaceholder"><i class="fas fa-camera"></i><p>الماسح جاهز</p><p class="small">اختر الكاميرا واضغط تشغيل</p></div><div class="scan-frame" id="scanFrame" style="display:none"><div class="scan-laser"></div><div class="scan-frame-label">وجّه الباركود هنا</div></div><div class="scan-status-bar" id="scanStatusBar" style="display:none"><span class="dot" id="statusDot"></span><span id="statusText">جاري التشغيل...</span></div>';
+    updateScannerUI('stopped');
+}
+
+function onScanSuccess(decodedText, decodedResult) {
+    const now = Date.now();
+    if (now - lastScanTime < SCAN_DEBOUNCE_MS) return;
+    lastScanTime = now;
+    const serial = cleanSerial(decodedText);
+    if (!serial) return;
+    console.log('Scanned:', serial, 'Format:', decodedResult?.result?.format?.formatName);
+    const input = document.getElementById('manualSerial');
+    input.value = serial; input.focus(); input.select();
+    const isDup = panels.some(p => p.serial === serial);
+    if (isDup) {
+        duplicateSerials.add(serial);
+        input.className = 'scan-error';
+        showToast('رقم مكرر: ' + serial, 'error');
+        playBeep('error');
+        updateStats(); renderTable();
+        setTimeout(() => { input.className = ''; input.value = ''; input.focus(); }, 1500);
+    } else {
+        input.className = 'scan-success';
+        showToast('تم القراءة: ' + serial, 'success');
+        playBeep('success');
+        if (navigator.vibrate) navigator.vibrate(50);
+        if (document.getElementById('continuousScan').checked) {
+            setTimeout(() => { if (input.value === serial) manualScan(); }, 400);
+        } else {
+            setTimeout(() => { stopScanner(); }, 300);
+        }
+    }
+}
+
+function onScanFailure(error) {}
+
+function handleCameraError(err) {
+    const name = err.name || '';
+    const msg = err.message || '';
+    if (name === 'NotAllowedError' || msg.includes('Permission') || msg.includes('denied')) {
+        showCameraError('تم رفض الوصول للكاميرا', 'يرجى السماح بالوصول للكاميرا من إعدادات المتصفح.');
+    } else if (name === 'NotFoundError' || msg.includes('found')) {
+        showCameraError('لم يتم العثور على كاميرا', 'تأكد من توصيل الكاميرا أو استخدم إدخال يدوي.');
+    } else if (name === 'NotReadableError' || msg.includes('readable') || msg.includes('in use')) {
+        showCameraError('الكاميرا مشغولة', 'قد تكون الكاميرا مستخدمة من تطبيق آخر. أغلق التطبيقات الأخرى وحاول مرة أخرى.');
+    } else if (name === 'OverconstrainedError') {
+        showCameraError('إعدادات الكاميرا غير مدعومة', 'جرب كاميرا أخرى من القائمة.');
+    } else {
+        showCameraError('خطأ في الكاميرا', msg || 'حدث خطأ غير متوقع. جرب مرة أخرى.');
+    }
+}
+
+function showCameraError(title, message) {
+    const box = document.getElementById('scannerBox');
+    const existing = box.querySelector('.camera-error');
+    if (existing) existing.remove();
+    const errDiv = document.createElement('div');
+    errDiv.className = 'camera-error';
+    errDiv.innerHTML = '<i class="fas fa-exclamation-circle"></i><h3>' + title + '</h3><p>' + message + '</p><button class="btn btn-primary" onclick="this.parentElement.remove(); startScanner();"><i class="fas fa-redo"></i> إعادة المحاولة</button>';
+    box.appendChild(errDiv);
+    showToast(title, 'error');
+}
+
+async function toggleTorch() {
+    if (!currentVideoTrack) { showToast('الفلاش غير متوفر', 'warning'); return; }
+    try {
+        const capabilities = currentVideoTrack.getCapabilities();
+        if (!capabilities.torch) { showToast('الفلاش غير مدعوم', 'warning'); return; }
+        const isOn = currentVideoTrack.getSettings().torch || false;
+        await currentVideoTrack.applyConstraints({ advanced: [{ torch: !isOn }] });
+        const btn = document.getElementById('torchBtn');
+        btn.style.background = !isOn ? 'var(--warning)' : '#1f2937';
+        showToast(!isOn ? 'الفلاش مفعّل' : 'الفلاش مطفأ', 'success');
+    } catch(e) { showToast('تعذر تفعيل الفلاش', 'warning'); }
+}
+
+function updateScannerUI(state) {
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const torchBtn = document.getElementById('torchBtn');
+    const statusBar = document.getElementById('scanStatusBar');
+    const statusDot = document.getElementById('statusDot');
+    const statusText = document.getElementById('statusText');
+    const frame = document.getElementById('scanFrame');
+    if (state === 'starting') {
+        startBtn.style.display = 'none'; stopBtn.style.display = 'block'; torchBtn.style.display = 'none';
+        if (statusBar) statusBar.style.display = 'flex';
+        if (statusDot) statusDot.className = 'dot warning';
+        if (statusText) statusText.textContent = 'جاري التشغيل...';
+        if (frame) frame.style.display = 'block';
+    } else if (state === 'scanning') {
+        startBtn.style.display = 'none'; stopBtn.style.display = 'block'; torchBtn.style.display = 'inline-flex';
+        if (statusBar) statusBar.style.display = 'flex';
+        if (statusDot) statusDot.className = 'dot';
+        if (statusText) statusText.textContent = 'جاري المسح...';
+        if (frame) frame.style.display = 'block';
+    } else if (state === 'stopped') {
+        startBtn.style.display = 'block'; stopBtn.style.display = 'none'; torchBtn.style.display = 'none';
+    }
+}
+
+// ===================== SERIAL PROCESSING =====================
+function cleanSerial(text) {
+    if (!text) return '';
+    return text.toString().trim().toUpperCase().replace(/[^A-Z0-9\-_]/g, '');
+}
+
+function manualScan() {
+    const input = document.getElementById('manualSerial');
+    const val = cleanSerial(input.value);
+    if (!val) { showToast('يرجى إدخال رقم تسلسلي', 'warning'); return; }
+    input.className = '';
+    const isDup = panels.some(p => p.serial === val);
+    if (isDup) {
+        duplicateSerials.add(val);
+        input.className = 'scan-error';
+        showToast('رقم مكرر: ' + val, 'error');
+        playBeep('error');
+        updateStats(); renderTable();
+        setTimeout(() => { input.className = ''; input.value = ''; input.focus(); }, 1500);
+        return;
+    }
+    const now = new Date();
+    const panel = {
+        id: panels.length > 0 ? Math.max(...panels.map(p => p.id)) + 1 : 1,
+        serial: val,
+        model: document.getElementById('panelModel').value.trim() || 'غير محدد',
+        date: now.toLocaleDateString('ar-SA'),
+        time: now.toLocaleTimeString('ar-SA', {hour:'2-digit', minute:'2-digit'}),
+        timestamp: now.getTime(),
+        customer: getSelectValue('customerName','newCustomerInput','مؤسسة صلة'),
+        project: getSelectValue('projectName','newProjectInput','غير محدد'),
+        location: getSelectValue('installLocation','newLocationInput','حقل الألواح'),
+        warranty: document.getElementById('warrantyPeriod').value,
+        notes: document.getElementById('notes').value.trim(),
+        status: 'نشط'
+    };
+    panels.unshift(panel);
+    saveToStorage(); updateStats(); renderTable(); updateFilters();
+    input.value = ''; input.className = ''; input.focus();
+    showToast('تمت الإضافة: ' + val, 'success');
+    playBeep('success');
+    if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
+}
+
+// ===================== FORM =====================
+function handleSelectChange(selectId, newInputId) {
+    const sel = document.getElementById(selectId);
+    const newInput = document.getElementById(newInputId);
+    if (sel.value === '__new__') { newInput.style.display = 'block'; newInput.focus(); }
+    else { newInput.style.display = 'none'; }
+}
+
+function getSelectValue(selectId, newInputId, fallback) {
+    const sel = document.getElementById(selectId);
+    const newInput = document.getElementById(newInputId);
+    if (sel.value === '__new__') {
+        const val = newInput.value.trim();
+        if (val) {
+            if (selectId === 'customerName' && !storedCustomers.includes(val)) storedCustomers.push(val);
+            if (selectId === 'projectName' && !storedProjects.includes(val)) storedProjects.push(val);
+            if (selectId === 'installLocation' && !storedLocations.includes(val)) storedLocations.push(val);
+        }
+        return val || fallback;
+    }
+    return sel.value || fallback;
+}
+
+// ===================== TABLE =====================
+function renderTable() {
+    const tbody = document.getElementById('tableBody');
+    const search = (document.getElementById('searchInput').value || '').toLowerCase();
+    const filterDate = document.getElementById('filterDate').value;
+    const filterCustomer = document.getElementById('filterCustomer').value;
+    const filterProject = document.getElementById('filterProject').value;
+    const filterLocation = document.getElementById('filterLocation').value;
+
+    let filtered = panels.filter(p => {
+        if (search) {
+            const searchable = [p.serial, p.model, p.customer, p.project, p.location, p.notes].join(' ').toLowerCase();
+            if (!searchable.includes(search)) return false;
+        }
+        if (filterDate && p.date !== filterDate) return false;
+        if (filterCustomer && p.customer !== filterCustomer) return false;
+        if (filterProject && p.project !== filterProject) return false;
+        if (filterLocation && p.location !== filterLocation) return false;
+        return true;
+    });
+
+    filtered.sort((a, b) => {
+        let av = a[sortCol], bv = b[sortCol];
+        if (sortCol === 'id' || sortCol === 'warranty') { av = Number(av) || 0; bv = Number(bv) || 0; }
+        else { av = String(av || '').toLowerCase(); bv = String(bv || '').toLowerCase(); }
+        if (av < bv) return sortDir === 'asc' ? -1 : 1;
+        if (av > bv) return sortDir === 'asc' ? 1 : -1;
+        return 0;
+    });
+
+    if (!filtered.length) {
+        tbody.innerHTML = '<tr><td colspan="10" class="empty-state"><i class="fas fa-inbox"></i><p>لا توجد نتائج</p></td></tr>';
+        document.getElementById('footerCount').textContent = '0 عنصر';
+        return;
+    }
+
+    tbody.innerHTML = filtered.map((p, idx) => {
+        const isDup = duplicateSerials.has(p.serial);
+        const noteShort = p.notes ? (p.notes.length > 20 ? p.notes.substring(0,20) + '...' : p.notes) : '-';
+        return '<tr class="' + (idx === 0 ? 'new-row ' : '') + (isDup ? 'duplicate' : '') + '"><td>#' + p.id + '</td><td class="serial-cell"><strong>' + escapeHtml(p.serial) + '</strong></td><td>' + escapeHtml(p.model) + '</td><td>' + p.warranty + ' سنوات</td><td>' + p.date + '</td><td>' + escapeHtml(p.location) + '</td><td>' + escapeHtml(p.project) + '</td><td>' + escapeHtml(p.customer) + '</td><td title="' + escapeHtml(p.notes || '') + '">' + escapeHtml(noteShort) + '</td><td><button class="action-btn" onclick="deletePanel(' + p.id + ')" title="حذف"><i class="fas fa-trash"></i></button></td></tr>';
+    }).join('');
+    document.getElementById('footerCount').textContent = filtered.length + ' عنصر';
+}
+
+function sortTable(col) {
+    if (sortCol === col) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+    else { sortCol = col; sortDir = 'desc'; }
+    document.querySelectorAll('th').forEach(th => th.classList.remove('sorted'));
+    const th = document.querySelector('th[onclick="sortTable(\'' + col + '\')"]');
+    if (th) th.classList.add('sorted');
+    renderTable();
+}
+
+function deletePanel(id) {
+    if (!confirm('حذف هذا السجل؟')) return;
+    panels = panels.filter(p => p.id !== id);
+    saveToStorage(); updateStats(); renderTable(); updateFilters();
+    showToast('تم الحذف', 'warning');
+}
+
+// ===================== FILTERS =====================
+function updateFilters() {
+    const dates = [...new Set(panels.map(p => p.date))].sort();
+    const dataProjects = [...new Set(panels.map(p => p.project))].sort();
+    const dataCustomers = [...new Set(panels.map(p => p.customer))].sort();
+    const dataLocations = [...new Set(panels.map(p => p.location))].sort();
+    const allProjects = [...new Set([...storedProjects, ...dataProjects])].sort();
+    const allCustomers = [...new Set([...storedCustomers, ...dataCustomers])].sort();
+    const allLocations = [...new Set([...storedLocations, ...dataLocations])].sort();
+
+    const updateSelect = (id, items, label) => {
+        const sel = document.getElementById(id); if (!sel) return;
+        const cur = sel.value;
+        let html = '<option value="">كل ' + label + '</option>';
+        items.forEach(i => { html += '<option value="' + escapeHtml(i) + '">' + escapeHtml(i) + '</option>'; });
+        sel.innerHTML = html;
+        if (items.includes(cur)) sel.value = cur;
+    };
+    updateSelect('filterDate', dates, 'التواريخ');
+    updateSelect('filterCustomer', allCustomers, 'العملاء');
+    updateSelect('filterProject', allProjects, 'المشاريع');
+    updateSelect('filterLocation', allLocations, 'المواقع');
+}
+
+// ===================== STATS =====================
+function updateStats() {
+    document.getElementById('statTotal').textContent = panels.length;
+    const today = new Date().toLocaleDateString('ar-SA');
+    document.getElementById('statToday').textContent = panels.filter(p => p.date === today).length;
+    document.getElementById('statDuplicates').textContent = duplicateSerials.size;
+    document.getElementById('statActive').textContent = panels.filter(p => p.status === 'نشط').length;
+}
+
+// ===================== EXPORT =====================
+function exportExcel() {
+    if (!panels.length) { showToast('لا توجد بيانات', 'warning'); return; }
+    const data = panels.map(p => ({
+        'الرقم': p.id, 'الرقم التسلسلي': p.serial, 'الموديل': p.model,
+        'الضمان (سنوات)': p.warranty, 'التاريخ': p.date, 'الوقت': p.time,
+        'الموقع': p.location, 'المشروع': p.project, 'العميل': p.customer,
+        'الحالة': p.status, 'ملاحظات': p.notes
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'الألواح');
+    ws['!cols'] = [{wch:6},{wch:20},{wch:16},{wch:12},{wch:12},{wch:10},{wch:16},{wch:18},{wch:18},{wch:10},{wch:30}];
+    XLSX.writeFile(wb, 'ضمان-ألواح-' + new Date().toISOString().slice(0,10) + '.xlsx');
+    showToast('تم تصدير Excel', 'success');
+}
+
+function exportPDF() {
+    if (!panels.length) { showToast('لا توجد بيانات', 'warning'); return; }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'landscape' });
+    const pageW = doc.internal.pageSize.getWidth();
+    doc.setFillColor(249, 115, 22);
+    doc.rect(0, 0, pageW, 32, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(16); doc.setFont('helvetica', 'bold');
+    doc.text('تقرير ضمان الألواح الشمسية', pageW - 14, 18, { align: 'right' });
+    doc.setFontSize(9); doc.setFont('helvetica', 'normal');
+    doc.text('تاريخ الإنشاء: ' + new Date().toLocaleDateString('ar-SA') + ' | إجمالي: ' + panels.length + ' لوح', pageW - 14, 26, { align: 'right' });
+    let y = 40;
+    const p = panels[0] || {};
+    doc.setTextColor(26, 26, 46); doc.setFontSize(10); doc.setFont('helvetica', 'bold');
+    doc.text('تفاصيل التركيب', pageW - 14, y, { align: 'right' }); y += 7;
+    doc.setFontSize(9); doc.setFont('helvetica', 'normal');
+    doc.text('العميل: ' + (p.customer || 'غير محدد'), pageW - 14, y, { align: 'right' }); y += 5;
+    doc.text('المشروع: ' + (p.project || 'غير محدد'), pageW - 14, y, { align: 'right' }); y += 5;
+    doc.text('الموقع: ' + (p.location || 'غير محدد'), pageW - 14, y, { align: 'right' }); y += 5;
+    doc.text('إجمالي الألواح: ' + panels.length, pageW - 14, y, { align: 'right' }); y += 8;
+
+    const tableData = panels.map(p => [p.id, p.serial, p.model, p.warranty + ' سنوات', p.date, p.location, p.project, p.customer]);
+    doc.autoTable({
+        startY: y,
+        head: [['الرقم', 'التسلسلي', 'الموديل', 'الضمان', 'التاريخ', 'الموقع', 'المشروع', 'العميل']],
+        body: tableData,
+        theme: 'grid',
+        headStyles: { fillColor: [249, 115, 22], textColor: 255, fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [245, 246, 248] },
+        styles: { fontSize: 8, cellPadding: 3 },
+        margin: { left: 14, right: 14 }
+    });
+    doc.save('تقرير-ضمان-' + new Date().toISOString().slice(0,10) + '.pdf');
+    showToast('تم تصدير PDF', 'success');
+}
+
+// ===================== UTILS =====================
+function showToast(message, type) {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = 'toast ' + (type || 'success');
+    const icon = type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-times-circle' : 'fa-exclamation-circle';
+    toast.innerHTML = '<i class="fas ' + icon + '"></i><span>' + escapeHtml(message) + '</span>';
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
+function playBeep(type) {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        gain.gain.value = 0.15;
+        osc.connect(gain); gain.connect(ctx.destination);
+        if (type === 'success') { osc.frequency.value = 1200; osc.start(); osc.stop(ctx.currentTime + 0.08); }
+        else { osc.frequency.value = 300; osc.start(); osc.stop(ctx.currentTime + 0.15); }
+    } catch(e) {}
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text || '';
+    return div.innerHTML;
+}
+
+window.addEventListener('beforeunload', async () => {
+    await forceCleanupScanner();
+});
+
+
+// ===================== PERMISSIONS =====================
+async function requestPermissions() {
+    const grantBtn = document.getElementById('grantBtn');
+    const permError = document.getElementById('permError');
+    const cameraStatus = document.getElementById('permCameraStatus');
+    const storageStatus = document.getElementById('permStorageStatus');
+
+    grantBtn.disabled = true;
+    grantBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحقق...';
+    permError.style.display = 'none';
+
+    let cameraGranted = false;
+    let storageGranted = false;
+
+    // 1. Request camera permission
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        stream.getTracks().forEach(t => t.stop());
+        cameraGranted = true;
+        cameraStatus.textContent = 'مسموح';
+        cameraStatus.style.color = '#10b981';
+    } catch(err) {
+        console.log('Camera permission denied:', err);
+        cameraStatus.textContent = 'مرفوض';
+        cameraStatus.style.color = '#ef4444';
+        permError.textContent = 'تم رفض الوصول للكاميرا. يمكنك استخدام الإدخال اليدوي.';
+        permError.style.display = 'block';
+    }
+
+    // 2. Check storage (localStorage)
+    try {
+        localStorage.setItem('_perm_test', '1');
+        localStorage.removeItem('_perm_test');
+        storageGranted = true;
+        storageStatus.textContent = 'مسموح';
+        storageStatus.style.color = '#10b981';
+    } catch(err) {
+        storageStatus.textContent = 'مرفوض';
+        storageStatus.style.color = '#ef4444';
+    }
+
+    // Small delay to show status
+    await new Promise(r => setTimeout(r, 500));
+
+    // Hide overlay and show app
+    hidePermissionOverlay();
+
+    // If camera granted, auto-populate cameras
+    if (cameraGranted) {
+        setTimeout(() => populateCameras(), 500);
+    }
+
+    showToast(cameraGranted ? 'تم السماح بالوصول' : 'وضع الإدخال اليدوي فقط', cameraGranted ? 'success' : 'warning');
+}
+
+function skipPermissions() {
+    hidePermissionOverlay();
+    showToast('وضع الإدخال اليدوي فقط', 'warning');
+}
+
+function hidePermissionOverlay() {
+    const overlay = document.getElementById('permissionOverlay');
+    if (overlay) {
+        overlay.style.transition = 'opacity 0.5s ease';
+        overlay.style.opacity = '0';
+        setTimeout(() => overlay.remove(), 500);
+    }
+}
+
+// Check if permissions already granted on load
+async function checkExistingPermissions() {
+    try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const hasCamera = devices.some(d => d.kind === 'videoinput');
+        const cameraLabel = devices.find(d => d.kind === 'videoinput' && d.label);
+
+        // If camera labels are visible, permission was already granted
+        if (cameraLabel && cameraLabel.label) {
+            hidePermissionOverlay();
+            setTimeout(() => populateCameras(), 300);
+            return;
+        }
+    } catch(e) {}
+
+    // Also check if we already have camera permission via getUserMedia
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        stream.getTracks().forEach(t => t.stop());
+        hidePermissionOverlay();
+        setTimeout(() => populateCameras(), 300);
+    } catch(e) {
+        // Permission not granted yet - keep overlay visible
+        console.log('Waiting for user permission...');
+    }
+}
+
+// Run permission check on load
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(checkExistingPermissions, 500);
+});
+
+</script>
+</body>
+</html>
