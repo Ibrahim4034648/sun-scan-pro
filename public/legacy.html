@@ -1029,57 +1029,202 @@ function updateStats() {
 }
 
 // ===================== EXPORT =====================
-function exportExcel() {
-    if (!panels.length) { showToast('لا توجد بيانات', 'warning'); return; }
-    const data = panels.map(p => ({
-        'الرقم': p.id, 'الرقم التسلسلي': p.serial, 'الموديل': p.model,
-        'الضمان (سنوات)': p.warranty, 'التاريخ': p.date, 'الوقت': p.time,
-        'الموقع': p.location, 'المشروع': p.project, 'العميل': p.customer,
-        'الحالة': p.status, 'ملاحظات': p.notes
-    }));
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'الألواح');
-    ws['!cols'] = [{wch:6},{wch:20},{wch:16},{wch:12},{wch:12},{wch:10},{wch:16},{wch:18},{wch:18},{wch:10},{wch:30}];
-    XLSX.writeFile(wb, 'ضمان-ألواح-' + new Date().toISOString().slice(0,10) + '.xlsx');
-    showToast('تم تصدير Excel', 'success');
+function _exportSummary() {
+    const today = new Date().toLocaleDateString('ar-SA');
+    const active = panels.filter(p => p.status === 'نشط').length;
+    const todayCount = panels.filter(p => p.date === today).length;
+    const models = [...new Set(panels.map(p => p.model).filter(Boolean))];
+    const customers = [...new Set(panels.map(p => p.customer).filter(Boolean))];
+    return { total: panels.length, active, todayCount, dup: duplicateSerials.size, models, customers };
 }
 
-function exportPDF() {
+function exportExcel() {
     if (!panels.length) { showToast('لا توجد بيانات', 'warning'); return; }
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ orientation: 'landscape' });
-    const pageW = doc.internal.pageSize.getWidth();
-    doc.setFillColor(249, 115, 22);
-    doc.rect(0, 0, pageW, 32, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(16); doc.setFont('helvetica', 'bold');
-    doc.text('تقرير ضمان الألواح الشمسية', pageW - 14, 18, { align: 'right' });
-    doc.setFontSize(9); doc.setFont('helvetica', 'normal');
-    doc.text('تاريخ الإنشاء: ' + new Date().toLocaleDateString('ar-SA') + ' | إجمالي: ' + panels.length + ' لوح', pageW - 14, 26, { align: 'right' });
-    let y = 40;
-    const p = panels[0] || {};
-    doc.setTextColor(26, 26, 46); doc.setFontSize(10); doc.setFont('helvetica', 'bold');
-    doc.text('تفاصيل التركيب', pageW - 14, y, { align: 'right' }); y += 7;
-    doc.setFontSize(9); doc.setFont('helvetica', 'normal');
-    doc.text('العميل: ' + (p.customer || 'غير محدد'), pageW - 14, y, { align: 'right' }); y += 5;
-    doc.text('المشروع: ' + (p.project || 'غير محدد'), pageW - 14, y, { align: 'right' }); y += 5;
-    doc.text('الموقع: ' + (p.location || 'غير محدد'), pageW - 14, y, { align: 'right' }); y += 5;
-    doc.text('إجمالي الألواح: ' + panels.length, pageW - 14, y, { align: 'right' }); y += 8;
+    const s = _exportSummary();
+    const headers = ['#','الرقم التسلسلي','الموديل','الضمان (سنوات)','تاريخ التركيب','الوقت','الموقع','المشروع','العميل','الحالة','ملاحظات'];
+    const rows = panels.map((p,i) => [i+1, p.serial, p.model, Number(p.warranty)||p.warranty, p.date, p.time, p.location, p.project, p.customer, p.status, p.notes||'']);
 
-    const tableData = panels.map(p => [p.id, p.serial, p.model, p.warranty + ' سنوات', p.date, p.location, p.project, p.customer]);
-    doc.autoTable({
-        startY: y,
-        head: [['الرقم', 'التسلسلي', 'الموديل', 'الضمان', 'التاريخ', 'الموقع', 'المشروع', 'العميل']],
-        body: tableData,
-        theme: 'grid',
-        headStyles: { fillColor: [249, 115, 22], textColor: 255, fontStyle: 'bold' },
-        alternateRowStyles: { fillColor: [245, 246, 248] },
-        styles: { fontSize: 8, cellPadding: 3 },
-        margin: { left: 14, right: 14 }
-    });
-    doc.save('تقرير-ضمان-' + new Date().toISOString().slice(0,10) + '.pdf');
-    showToast('تم تصدير PDF', 'success');
+    const aoa = [
+        ['نظام إدارة ضمان الألواح الشمسية'],
+        ['تقرير شامل · ' + new Date().toLocaleString('ar-SA')],
+        [],
+        ['الإجمالي', s.total, '', 'نشط', s.active, '', 'اليوم', s.todayCount, '', 'مكرر', s.dup],
+        [],
+        headers,
+        ...rows
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols'] = [{wch:5},{wch:22},{wch:18},{wch:14},{wch:14},{wch:10},{wch:18},{wch:20},{wch:20},{wch:12},{wch:32}];
+    ws['!merges'] = [
+        {s:{r:0,c:0},e:{r:0,c:10}},
+        {s:{r:1,c:0},e:{r:1,c:10}}
+    ];
+    ws['!rows'] = [{hpt:34},{hpt:20},{},{hpt:24},{},{hpt:26}];
+    ws['!views'] = [{RTL:true}];
+    ws['!freeze'] = { xSplit: 0, ySplit: 6 };
+    const lastCol = String.fromCharCode(64 + headers.length);
+    ws['!autofilter'] = { ref: `A6:${lastCol}6` };
+
+    const FONT = 'Cairo';
+    const border = { top:{style:'thin',color:{rgb:'E5E7EB'}}, bottom:{style:'thin',color:{rgb:'E5E7EB'}}, left:{style:'thin',color:{rgb:'E5E7EB'}}, right:{style:'thin',color:{rgb:'E5E7EB'}} };
+
+    // Title
+    ws['A1'].s = { font:{name:FONT,bold:true,sz:18,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:'F97316'}}, alignment:{horizontal:'center',vertical:'center'} };
+    ws['A2'].s = { font:{name:FONT,sz:11,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:'FB923C'}}, alignment:{horizontal:'center',vertical:'center'} };
+
+    // Summary row (row index 3 -> row 4)
+    const sumLabel = { font:{name:FONT,bold:true,sz:11,color:{rgb:'1F2937'}}, fill:{fgColor:{rgb:'FEF3C7'}}, alignment:{horizontal:'center',vertical:'center'}, border };
+    const sumVal   = { font:{name:FONT,bold:true,sz:12,color:{rgb:'F97316'}}, fill:{fgColor:{rgb:'FFFBEB'}}, alignment:{horizontal:'center',vertical:'center'}, border };
+    [0,3,6,9].forEach(c => { const a = XLSX.utils.encode_cell({r:3,c}); if (ws[a]) ws[a].s = sumLabel; });
+    [1,4,7,10].forEach(c => { const a = XLSX.utils.encode_cell({r:3,c}); if (ws[a]) ws[a].s = sumVal; });
+
+    // Header row (row 6 -> index 5)
+    const head = { font:{name:FONT,bold:true,sz:11,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:'1F2937'}}, alignment:{horizontal:'center',vertical:'center',wrapText:true}, border };
+    for (let c=0;c<headers.length;c++){ const a = XLSX.utils.encode_cell({r:5,c}); if (ws[a]) ws[a].s = head; }
+
+    // Body rows
+    for (let r=0;r<rows.length;r++){
+        const rowIdx = 6 + r;
+        const zebra = r % 2 === 0 ? 'FFFFFF' : 'F9FAFB';
+        for (let c=0;c<headers.length;c++){
+            const a = XLSX.utils.encode_cell({r:rowIdx,c});
+            if (!ws[a]) continue;
+            const isStatus = c === 9;
+            const status = rows[r][9];
+            let statusColor = '6B7280';
+            if (status === 'نشط') statusColor = '10B981';
+            else if (status === 'منتهي') statusColor = 'EF4444';
+            ws[a].s = {
+                font:{name:FONT, sz:10, bold: c===1 || isStatus, color:{rgb: isStatus ? statusColor : '1F2937'}},
+                fill:{fgColor:{rgb:zebra}},
+                alignment:{horizontal: c===10 ? 'right' : 'center', vertical:'center', wrapText: c===10},
+                border
+            };
+        }
+    }
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'الألواح');
+    wb.Workbook = wb.Workbook || {}; wb.Workbook.Views = [{ RTL: true }];
+    XLSX.writeFile(wb, 'ضمان-الألواح-' + new Date().toISOString().slice(0,10) + '.xlsx');
+    showToast('تم تصدير Excel بتصميم احترافي', 'success');
+}
+
+function _buildPdfHTML() {
+    const s = _exportSummary();
+    const fmtDate = new Date().toLocaleString('ar-SA');
+    const statusColor = st => st === 'نشط' ? '#10b981' : st === 'منتهي' ? '#ef4444' : '#6b7280';
+    const rowsHtml = panels.map((p,i) => `
+        <tr>
+            <td>${i+1}</td>
+            <td style="font-weight:700;font-family:monospace">${p.serial||''}</td>
+            <td>${p.model||''}</td>
+            <td>${p.warranty||''} سنوات</td>
+            <td>${p.date||''}</td>
+            <td>${p.location||''}</td>
+            <td>${p.project||''}</td>
+            <td>${p.customer||''}</td>
+            <td><span class="badge" style="background:${statusColor(p.status)}1a;color:${statusColor(p.status)};border:1px solid ${statusColor(p.status)}55">${p.status||'—'}</span></td>
+        </tr>
+    `).join('');
+
+    return `
+    <div id="pdfReport" style="width:1100px;padding:0;background:#fff;color:#111827;font-family:'Cairo',sans-serif;direction:rtl">
+        <div style="background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;padding:28px 36px;display:flex;justify-content:space-between;align-items:center;border-radius:0">
+            <div>
+                <div style="font-size:13px;opacity:.9;letter-spacing:1px">SOLAR WARRANTY SYSTEM</div>
+                <div style="font-size:26px;font-weight:800;margin-top:4px">تقرير ضمان الألواح الشمسية</div>
+                <div style="font-size:13px;opacity:.92;margin-top:6px">تاريخ الإنشاء: ${fmtDate}</div>
+            </div>
+            <div style="width:74px;height:74px;border-radius:16px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:38px">☀</div>
+        </div>
+
+        <div style="padding:24px 36px 0;display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
+            ${[
+                ['الإجمالي', s.total, '#f97316'],
+                ['نشط', s.active, '#10b981'],
+                ['اليوم', s.todayCount, '#3b82f6'],
+                ['مكرر', s.dup, '#ef4444']
+            ].map(([l,v,c]) => `
+                <div style="border:1px solid #e5e7eb;border-radius:14px;padding:14px 16px;background:#fff;border-top:4px solid ${c}">
+                    <div style="font-size:12px;color:#6b7280;font-weight:600">${l}</div>
+                    <div style="font-size:26px;font-weight:800;color:${c};margin-top:4px">${v}</div>
+                </div>
+            `).join('')}
+        </div>
+
+        <div style="padding:22px 36px 0">
+            <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:14px;padding:16px 18px">
+                <div style="font-size:14px;font-weight:700;color:#1f2937;margin-bottom:10px">معلومات سريعة</div>
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;font-size:12px;color:#374151">
+                    <div><b style="color:#6b7280">الموديلات:</b> ${s.models.length}</div>
+                    <div><b style="color:#6b7280">العملاء:</b> ${s.customers.length}</div>
+                    <div><b style="color:#6b7280">المستخدم:</b> النظام</div>
+                </div>
+            </div>
+        </div>
+
+        <div style="padding:22px 36px 36px">
+            <div style="font-size:15px;font-weight:700;color:#1f2937;margin-bottom:10px;border-right:4px solid #f97316;padding-right:10px">تفاصيل الألواح المسجلة</div>
+            <table style="width:100%;border-collapse:separate;border-spacing:0;font-size:11.5px;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden">
+                <thead>
+                    <tr style="background:#1f2937;color:#fff">
+                        ${['#','الرقم التسلسلي','الموديل','الضمان','التاريخ','الموقع','المشروع','العميل','الحالة']
+                            .map(h => `<th style="padding:11px 8px;font-weight:700;text-align:center">${h}</th>`).join('')}
+                    </tr>
+                </thead>
+                <tbody>${rowsHtml}</tbody>
+            </table>
+            <style>
+                #pdfReport td { padding:9px 8px; text-align:center; border-bottom:1px solid #f1f5f9; color:#1f2937 }
+                #pdfReport tbody tr:nth-child(even) td { background:#f9fafb }
+                #pdfReport .badge { display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700 }
+            </style>
+        </div>
+
+        <div style="padding:14px 36px;border-top:1px solid #e5e7eb;background:#f9fafb;display:flex;justify-content:space-between;font-size:11px;color:#6b7280">
+            <div>© ${new Date().getFullYear()} نظام إدارة ضمان الألواح الشمسية</div>
+            <div>صفحة 1 / 1 · ${panels.length} سجل</div>
+        </div>
+    </div>`;
+}
+
+async function exportPDF() {
+    if (!panels.length) { showToast('لا توجد بيانات', 'warning'); return; }
+    showToast('جاري إنشاء التقرير...', 'info');
+    const host = document.createElement('div');
+    host.style.cssText = 'position:fixed;left:-99999px;top:0;background:#fff';
+    host.innerHTML = _buildPdfHTML();
+    document.body.appendChild(host);
+    try {
+        await document.fonts.ready;
+        const node = host.firstElementChild;
+        const canvas = await html2canvas(node, { scale: 2, backgroundColor:'#ffffff', useCORS:true, logging:false });
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({ orientation:'portrait', unit:'pt', format:'a4' });
+        const pageW = pdf.internal.pageSize.getWidth();
+        const pageH = pdf.internal.pageSize.getHeight();
+        const imgW = pageW;
+        const imgH = canvas.height * imgW / canvas.width;
+        const imgData = canvas.toDataURL('image/jpeg', 0.95);
+        let heightLeft = imgH;
+        let position = 0;
+        pdf.addImage(imgData, 'JPEG', 0, position, imgW, imgH, undefined, 'FAST');
+        heightLeft -= pageH;
+        while (heightLeft > 0) {
+            position = heightLeft - imgH;
+            pdf.addPage();
+            pdf.addImage(imgData, 'JPEG', 0, position, imgW, imgH, undefined, 'FAST');
+            heightLeft -= pageH;
+        }
+        pdf.save('تقرير-ضمان-' + new Date().toISOString().slice(0,10) + '.pdf');
+        showToast('تم تصدير PDF بتصميم احترافي', 'success');
+    } catch (e) {
+        console.error(e);
+        showToast('تعذر إنشاء PDF', 'error');
+    } finally {
+        host.remove();
+    }
 }
 
 // ===================== UTILS =====================
