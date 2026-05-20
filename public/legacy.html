@@ -1071,7 +1071,7 @@ function renderTable() {
     tbody.innerHTML = filtered.map((p, idx) => {
         const isDup = duplicateSerials.has(p.serial);
         const noteShort = p.notes ? (p.notes.length > 20 ? p.notes.substring(0,20) + '...' : p.notes) : '-';
-        return '<tr class="' + (idx === 0 ? 'new-row ' : '') + (isDup ? 'duplicate' : '') + '"><td>#' + p.id + '</td><td class="serial-cell"><strong>' + escapeHtml(p.serial) + '</strong></td><td>' + escapeHtml(p.model) + '</td><td>' + p.warranty + ' سنوات</td><td>' + p.date + '</td><td>' + escapeHtml(p.location) + '</td><td>' + escapeHtml(p.project) + '</td><td>' + escapeHtml(p.customer) + '</td><td title="' + escapeHtml(p.notes || '') + '">' + escapeHtml(noteShort) + '</td><td><button class="action-btn" onclick="deletePanel(' + p.id + ')" title="حذف"><i class="fas fa-trash"></i></button></td></tr>';
+        return '<tr class="' + (idx === 0 ? 'new-row ' : '') + (isDup ? 'duplicate' : '') + '"><td>#' + p.id + '</td><td class="serial-cell"><strong>' + escapeHtml(p.serial) + '</strong></td><td>' + escapeHtml(p.model) + '</td><td>' + escapeHtml(String(p.warranty || '-')) + '</td><td>' + p.date + '</td><td>' + escapeHtml(p.location) + '</td><td>' + escapeHtml(p.project) + '</td><td>' + escapeHtml(p.customer) + '</td><td title="' + escapeHtml(p.notes || '') + '">' + escapeHtml(noteShort) + '</td><td><button class="action-btn" onclick="deletePanel(' + p.id + ')" title="حذف"><i class="fas fa-trash"></i></button></td></tr>';
     }).join('');
     document.getElementById('footerCount').textContent = filtered.length + ' عنصر';
 }
