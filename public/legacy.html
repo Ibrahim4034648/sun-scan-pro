@@ -584,7 +584,26 @@ let storedProjects = ['مشروع القويرة','مشروع الرحاب','م�
 let storedLocations = ['حقل الألواح','غرفة التحكم'];
 let storedModels = ['SP-400W-MONO','SP-450W-MONO','SP-550W-BIFACIAL'];
 try { const m = JSON.parse(localStorage.getItem('solarWarrantyModels_v1')||'null'); if (Array.isArray(m) && m.length) storedModels = m; } catch(e) {}
+try { const c = JSON.parse(localStorage.getItem('solarWarrantyCustomers_v1')||'null'); if (Array.isArray(c) && c.length) storedCustomers = c; } catch(e) {}
+try { const pr = JSON.parse(localStorage.getItem('solarWarrantyProjects_v1')||'null'); if (Array.isArray(pr) && pr.length) storedProjects = pr; } catch(e) {}
+try { const l = JSON.parse(localStorage.getItem('solarWarrantyLocations_v1')||'null'); if (Array.isArray(l) && l.length) storedLocations = l; } catch(e) {}
 function saveStoredModels() { try { localStorage.setItem('solarWarrantyModels_v1', JSON.stringify(storedModels)); } catch(e) {} }
+function saveStoredCustomers() { try { localStorage.setItem('solarWarrantyCustomers_v1', JSON.stringify(storedCustomers)); } catch(e) {} }
+function saveStoredProjects() { try { localStorage.setItem('solarWarrantyProjects_v1', JSON.stringify(storedProjects)); } catch(e) {} }
+function saveStoredLocations() { try { localStorage.setItem('solarWarrantyLocations_v1', JSON.stringify(storedLocations)); } catch(e) {} }
+
+function _populateSimpleSelect(selectId, items, selected) {
+    const sel = document.getElementById(selectId); if (!sel) return;
+    const cur = selected || sel.value;
+    let html = '<option value="">-- اختر --</option>';
+    items.forEach(v => { html += '<option value="' + escapeHtml(v) + '">' + escapeHtml(v) + '</option>'; });
+    html += '<option value="__new__">+ إضافة جديد</option>';
+    sel.innerHTML = html;
+    if (cur && items.includes(cur)) sel.value = cur;
+}
+function populateCustomerSelect(sel) { _populateSimpleSelect('customerName', storedCustomers, sel); }
+function populateProjectSelect(sel) { _populateSimpleSelect('projectName', storedProjects, sel); }
+function populateLocationSelect(sel) { _populateSimpleSelect('installLocation', storedLocations, sel); }
 function populateModelSelect() {
     const sel = document.getElementById('panelModel'); if (!sel) return;
     const cur = sel.value;
@@ -595,6 +614,37 @@ function populateModelSelect() {
     if (storedModels.includes(cur)) sel.value = cur;
 }
 
+const ITEM_CFG = {
+    customer: { list: () => storedCustomers, save: saveStoredCustomers, repop: (v) => populateCustomerSelect(v), selectId: 'customerName', inputId: 'newCustomerInput', rowId: 'newCustomerRow', label: 'العميل' },
+    project:  { list: () => storedProjects,  save: saveStoredProjects,  repop: (v) => populateProjectSelect(v),  selectId: 'projectName',   inputId: 'newProjectInput',  rowId: 'newProjectRow',  label: 'المشروع' },
+    location: { list: () => storedLocations, save: saveStoredLocations, repop: (v) => populateLocationSelect(v), selectId: 'installLocation',inputId: 'newLocationInput', rowId: 'newLocationRow', label: 'الموقع' },
+    model:    { list: () => storedModels,    save: saveStoredModels,    repop: () => { populateModelSelect(); }, selectId: 'panelModel',    inputId: 'newModelInput',    rowId: 'newModelRow',    label: 'الموديل' }
+};
+
+function saveNewItem(kind) {
+    const cfg = ITEM_CFG[kind]; if (!cfg) return;
+    const input = document.getElementById(cfg.inputId);
+    const val = (input.value || '').trim();
+    if (!val) { showToast('أدخل اسماً صالحاً', 'error'); input.focus(); return; }
+    if (val.length > 100) { showToast('الاسم طويل جداً', 'error'); return; }
+    const list = cfg.list();
+    if (list.includes(val)) { showToast('موجود مسبقاً', 'error'); }
+    else { list.push(val); cfg.save(); }
+    cfg.repop(val);
+    document.getElementById(cfg.selectId).value = val;
+    document.getElementById(cfg.rowId).classList.remove('show');
+    input.value = '';
+    updateFilters && updateFilters();
+    showToast('تم حفظ ' + cfg.label + ': ' + val, 'success');
+}
+function cancelNewItem(kind) {
+    const cfg = ITEM_CFG[kind]; if (!cfg) return;
+    document.getElementById(cfg.rowId).classList.remove('show');
+    document.getElementById(cfg.inputId).value = '';
+    const sel = document.getElementById(cfg.selectId);
+    if (sel.value === '__new__') sel.value = '';
+}
+
 // ===================== INIT =====================
 document.addEventListener('DOMContentLoaded', () => {
     loadFromStorage();
@@ -603,6 +653,9 @@ document.addEventListener('DOMContentLoaded', () => {
     renderTable();
     updateFilters();
     populateModelSelect();
+    populateCustomerSelect();
+    populateProjectSelect();
+    populateLocationSelect();
     document.getElementById('manualSerial').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') { e.preventDefault(); manualScan(); }
     });
