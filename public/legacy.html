@@ -436,16 +436,20 @@ s="header">
         <div class="form-grid">
             <div class="form-group">
                 <label>العميل</label>
-                <select id="customerName" onchange="handleSelectChange('customerName','newCustomerInput')">
+                <select id="customerName" onchange="handleSelectChange('customerName','newCustomerInput','newCustomerRow')">
                     <option value="">-- اختر --</option>
                     <option value="مؤسسة صلة" selected>مؤسسة صلة</option>
                     <option value="__new__">+ إضافة جديد</option>
                 </select>
-                <input type="text" id="newCustomerInput" class="new-input" placeholder="اسم العميل الجديد">
+                <div id="newCustomerRow" class="new-row">
+                    <input type="text" id="newCustomerInput" class="new-input" placeholder="اسم العميل الجديد">
+                    <button type="button" class="save-new" onclick="saveNewItem('customer')"><i class="fas fa-check"></i> حفظ</button>
+                    <button type="button" class="cancel-new" onclick="cancelNewItem('customer')" title="إلغاء"><i class="fas fa-times"></i></button>
+                </div>
             </div>
             <div class="form-group">
                 <label>المشروع</label>
-                <select id="projectName" onchange="handleSelectChange('projectName','newProjectInput')">
+                <select id="projectName" onchange="handleSelectChange('projectName','newProjectInput','newProjectRow')">
                     <option value="">-- اختر --</option>
                     <option value="مشروع القويرة">مشروع القويرة</option>
                     <option value="مشروع الرحاب">مشروع الرحاب</option>
@@ -457,25 +461,37 @@ s="header">
                     <option value="مشروع فلك 6">مشروع فلك 6</option>
                     <option value="__new__">+ إضافة جديد</option>
                 </select>
-                <input type="text" id="newProjectInput" class="new-input" placeholder="اسم المشروع الجديد">
+                <div id="newProjectRow" class="new-row">
+                    <input type="text" id="newProjectInput" class="new-input" placeholder="اسم المشروع الجديد">
+                    <button type="button" class="save-new" onclick="saveNewItem('project')"><i class="fas fa-check"></i> حفظ</button>
+                    <button type="button" class="cancel-new" onclick="cancelNewItem('project')" title="إلغاء"><i class="fas fa-times"></i></button>
+                </div>
             </div>
             <div class="form-group">
                 <label>الموقع</label>
-                <select id="installLocation" onchange="handleSelectChange('installLocation','newLocationInput')">
+                <select id="installLocation" onchange="handleSelectChange('installLocation','newLocationInput','newLocationRow')">
                     <option value="">-- اختر --</option>
                     <option value="حقل الألواح" selected>حقل الألواح</option>
                     <option value="غرفة التحكم">غرفة التحكم</option>
                     <option value="__new__">+ إضافة جديد</option>
                 </select>
-                <input type="text" id="newLocationInput" class="new-input" placeholder="الموقع الجديد">
+                <div id="newLocationRow" class="new-row">
+                    <input type="text" id="newLocationInput" class="new-input" placeholder="الموقع الجديد">
+                    <button type="button" class="save-new" onclick="saveNewItem('location')"><i class="fas fa-check"></i> حفظ</button>
+                    <button type="button" class="cancel-new" onclick="cancelNewItem('location')" title="إلغاء"><i class="fas fa-times"></i></button>
+                </div>
             </div>
             <div class="form-group">
                 <label>موديل اللوح</label>
-                <select id="panelModel" onchange="handleSelectChange('panelModel','newModelInput')">
+                <select id="panelModel" onchange="handleSelectChange('panelModel','newModelInput','newModelRow')">
                     <option value="">-- اختر --</option>
                     <option value="__new__">+ إضافة جديد</option>
                 </select>
-                <input type="text" id="newModelInput" class="new-input" placeholder="اسم الموديل الجديد">
+                <div id="newModelRow" class="new-row">
+                    <input type="text" id="newModelInput" class="new-input" placeholder="اسم الموديل الجديد">
+                    <button type="button" class="save-new" onclick="saveNewItem('model')"><i class="fas fa-check"></i> حفظ</button>
+                    <button type="button" class="cancel-new" onclick="cancelNewItem('model')" title="إلغاء"><i class="fas fa-times"></i></button>
+                </div>
             </div>
             <div class="form-group">
                 <label>الضمان</label>
