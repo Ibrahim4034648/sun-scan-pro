@@ -624,15 +624,40 @@ function backupData() {
     a.click(); URL.revokeObjectURL(url);
     showToast('تم التنزيل', 'success');
 }
+function _sanitizeStr(v, max) {
+    if (v === undefined || v === null) return '';
+    let s = String(v);
+    if (max && s.length > max) s = s.slice(0, max);
+    return s.replace(/<[^>]*>/g, '');
+}
+function _validatePanel(p) {
+    if (!p || typeof p !== 'object' || Array.isArray(p)) return null;
+    const w = Number(p.warranty);
+    return {
+        id: Number.isFinite(Number(p.id)) ? Number(p.id) : Date.now() + Math.floor(Math.random()*1000),
+        serial: _sanitizeStr(p.serial, 100),
+        model: _sanitizeStr(p.model, 100),
+        warranty: Number.isFinite(w) && w >= 0 && w <= 100 ? w : 0,
+        date: _sanitizeStr(p.date, 30),
+        location: _sanitizeStr(p.location, 200),
+        project: _sanitizeStr(p.project, 200),
+        customer: _sanitizeStr(p.customer, 200),
+        notes: _sanitizeStr(p.notes, 1000),
+        status: _sanitizeStr(p.status, 30)
+    };
+}
 function restoreData(e) {
     const file = e.target.files[0]; if (!file) return;
+    if (file.size > 10 * 1024 * 1024) { showToast('الملف كبير جداً', 'error'); e.target.value = ''; return; }
     const reader = new FileReader();
     reader.onload = (ev) => {
         try {
             const data = JSON.parse(ev.target.result);
             if (Array.isArray(data)) {
-                panels = data; saveToStorage(); updateStats(); renderTable(); updateFilters();
-                showToast('تم الاستعادة بنجاح', 'success');
+                if (data.length > 50000) { showToast('عدد السجلات يتجاوز الحد', 'error'); return; }
+                const cleaned = data.map(_validatePanel).filter(Boolean);
+                panels = cleaned; saveToStorage(); updateStats(); renderTable(); updateFilters();
+                showToast('تم الاستعادة بنجاح (' + cleaned.length + ' سجل)', 'success');
             } else { showToast('ملف غير صالح', 'error'); }
         } catch(err) { showToast('خطأ في القراءة', 'error'); }
     };
@@ -1114,17 +1139,18 @@ function _buildPdfHTML() {
     const s = _exportSummary();
     const fmtDate = new Date().toLocaleString('ar-SA');
     const statusColor = st => st === 'نشط' ? '#10b981' : st === 'منتهي' ? '#ef4444' : '#6b7280';
+    const esc = (v) => escapeHtml(v == null ? '' : String(v));
     const rowsHtml = panels.map((p,i) => `
         <tr>
             <td>${i+1}</td>
-            <td style="font-weight:700;font-family:monospace">${p.serial||''}</td>
-            <td>${p.model||''}</td>
-            <td>${p.warranty||''} سنوات</td>
-            <td>${p.date||''}</td>
-            <td>${p.location||''}</td>
-            <td>${p.project||''}</td>
-            <td>${p.customer||''}</td>
-            <td><span class="badge" style="background:${statusColor(p.status)}1a;color:${statusColor(p.status)};border:1px solid ${statusColor(p.status)}55">${p.status||'—'}</span></td>
+            <td style="font-weight:700;font-family:monospace">${esc(p.serial)}</td>
+            <td>${esc(p.model)}</td>
+            <td>${esc(p.warranty)} سنوات</td>
+            <td>${esc(p.date)}</td>
+            <td>${esc(p.location)}</td>
+            <td>${esc(p.project)}</td>
+            <td>${esc(p.customer)}</td>
+            <td><span class="badge" style="background:${statusColor(p.status)}1a;color:${statusColor(p.status)};border:1px solid ${statusColor(p.status)}55">${esc(p.status) || '—'}</span></td>
         </tr>
     `).join('');
 
