@@ -707,12 +707,11 @@ function _sanitizeStr(v, max) {
 }
 function _validatePanel(p) {
     if (!p || typeof p !== 'object' || Array.isArray(p)) return null;
-    const w = Number(p.warranty);
     return {
         id: Number.isFinite(Number(p.id)) ? Number(p.id) : Date.now() + Math.floor(Math.random()*1000),
         serial: _sanitizeStr(p.serial, 100),
         model: _sanitizeStr(p.model, 100),
-        warranty: Number.isFinite(w) && w >= 0 && w <= 100 ? w : 0,
+        warranty: _sanitizeStr(p.warranty, 20),
         date: _sanitizeStr(p.date, 30),
         location: _sanitizeStr(p.location, 200),
         project: _sanitizeStr(p.project, 200),
