@@ -199,6 +199,12 @@
         }
         .form-group textarea { resize: vertical; min-height: 50px; }
         .form-group .new-input { margin-top: 6px; display: none; }
+        .new-row { display: none; gap: 6px; margin-top: 6px; }
+        .new-row.show { display: flex; }
+        .new-row .new-input { display: block; margin-top: 0; flex: 1; }
+        .new-row .save-new { background: linear-gradient(135deg,#f97316,#ea580c); color:#fff; border:none; padding:0 14px; border-radius:10px; font-weight:700; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; white-space:nowrap; }
+        .new-row .save-new:hover { filter: brightness(1.08); }
+        .new-row .cancel-new { background:#f3f4f6; color:#374151; border:1px solid #e5e7eb; padding:0 12px; border-radius:10px; cursor:pointer; }
 
         .table-toolbar {
             display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
