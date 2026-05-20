@@ -1055,7 +1055,7 @@ function renderTable() {
 
     filtered.sort((a, b) => {
         let av = a[sortCol], bv = b[sortCol];
-        if (sortCol === 'id' || sortCol === 'warranty') { av = Number(av) || 0; bv = Number(bv) || 0; }
+        if (sortCol === 'id') { av = Number(av) || 0; bv = Number(bv) || 0; }
         else { av = String(av || '').toLowerCase(); bv = String(bv || '').toLowerCase(); }
         if (av < bv) return sortDir === 'asc' ? -1 : 1;
         if (av > bv) return sortDir === 'asc' ? 1 : -1;
