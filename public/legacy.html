@@ -1012,25 +1012,23 @@ function manualScan() {
 }
 
 // ===================== FORM =====================
-function handleSelectChange(selectId, newInputId) {
+function handleSelectChange(selectId, newInputId, rowId) {
     const sel = document.getElementById(selectId);
+    const row = rowId ? document.getElementById(rowId) : null;
     const newInput = document.getElementById(newInputId);
-    if (sel.value === '__new__') { newInput.style.display = 'block'; newInput.focus(); }
-    else { newInput.style.display = 'none'; }
+    if (sel.value === '__new__') {
+        if (row) row.classList.add('show'); else if (newInput) newInput.style.display = 'block';
+        if (newInput) newInput.focus();
+    } else {
+        if (row) row.classList.remove('show'); else if (newInput) newInput.style.display = 'none';
+    }
 }
 
 function getSelectValue(selectId, newInputId, fallback) {
     const sel = document.getElementById(selectId);
-    const newInput = document.getElementById(newInputId);
     if (sel.value === '__new__') {
-        const val = newInput.value.trim();
-        if (val) {
-            if (selectId === 'customerName' && !storedCustomers.includes(val)) storedCustomers.push(val);
-            if (selectId === 'projectName' && !storedProjects.includes(val)) storedProjects.push(val);
-            if (selectId === 'installLocation' && !storedLocations.includes(val)) storedLocations.push(val);
-            if (selectId === 'panelModel' && !storedModels.includes(val)) { storedModels.push(val); saveStoredModels(); populateModelSelect(); document.getElementById('panelModel').value = val; document.getElementById('newModelInput').style.display = 'none'; document.getElementById('newModelInput').value = ''; }
-        }
-        return val || fallback;
+        const v = (document.getElementById(newInputId).value || '').trim();
+        return v || fallback;
     }
     return sel.value || fallback;
 }
