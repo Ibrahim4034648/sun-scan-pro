@@ -494,18 +494,18 @@ s="header">
                 </div>
             </div>
             <div class="form-group">
-                <label>الضمان</label>
+                <label>موقع اللوح في المجموعة (String)</label>
                 <select id="warrantyPeriod">
-                    <option value="1">1 سنة</option>
-                    <option value="2">2 سنة</option>
-                    <option value="3">3 سنوات</option>
-                    <option value="4">4 سنوات</option>
-                    <option value="5">5 سنوات</option>
-                    <option value="6">6 سنوات</option>
-                    <option value="7">7 سنوات</option>
-                    <option value="8">8 سنوات</option>
-                    <option value="9">9 سنوات</option>
-                    <option value="10" selected>10 سنوات</option>
+                    <option value="St1" selected>St1</option>
+                    <option value="St2">St2</option>
+                    <option value="St3">St3</option>
+                    <option value="St4">St4</option>
+                    <option value="St5">St5</option>
+                    <option value="St6">St6</option>
+                    <option value="St7">St7</option>
+                    <option value="St8">St8</option>
+                    <option value="St9">St9</option>
+                    <option value="St10">St10</option>
                 </select>
             </div>
             <div class="form-group" style="grid-column:1/-1">
@@ -536,7 +536,7 @@ s="header">
                         <th onclick="sortTable('id')"># <span class="sort-icon"><i class="fas fa-sort"></i></span></th>
                         <th onclick="sortTable('serial')">التسلسلي <span class="sort-icon"><i class="fas fa-sort"></i></span></th>
                         <th onclick="sortTable('model')">الموديل <span class="sort-icon"><i class="fas fa-sort"></i></span></th>
-                        <th onclick="sortTable('warranty')">الضمان <span class="sort-icon"><i class="fas fa-sort"></i></span></th>
+                        <th onclick="sortTable('warranty')">المجموعة (String) <span class="sort-icon"><i class="fas fa-sort"></i></span></th>
                         <th onclick="sortTable('date')">التاريخ <span class="sort-icon"><i class="fas fa-sort"></i></span></th>
                         <th onclick="sortTable('location')">الموقع <span class="sort-icon"><i class="fas fa-sort"></i></span></th>
                         <th onclick="sortTable('project')">المشروع <span class="sort-icon"><i class="fas fa-sort"></i></span></th>
@@ -707,12 +707,11 @@ function _sanitizeStr(v, max) {
 }
 function _validatePanel(p) {
     if (!p || typeof p !== 'object' || Array.isArray(p)) return null;
-    const w = Number(p.warranty);
     return {
         id: Number.isFinite(Number(p.id)) ? Number(p.id) : Date.now() + Math.floor(Math.random()*1000),
         serial: _sanitizeStr(p.serial, 100),
         model: _sanitizeStr(p.model, 100),
-        warranty: Number.isFinite(w) && w >= 0 && w <= 100 ? w : 0,
+        warranty: _sanitizeStr(p.warranty, 20),
         date: _sanitizeStr(p.date, 30),
         location: _sanitizeStr(p.location, 200),
         project: _sanitizeStr(p.project, 200),
@@ -1056,7 +1055,7 @@ function renderTable() {
 
     filtered.sort((a, b) => {
         let av = a[sortCol], bv = b[sortCol];
-        if (sortCol === 'id' || sortCol === 'warranty') { av = Number(av) || 0; bv = Number(bv) || 0; }
+        if (sortCol === 'id') { av = Number(av) || 0; bv = Number(bv) || 0; }
         else { av = String(av || '').toLowerCase(); bv = String(bv || '').toLowerCase(); }
         if (av < bv) return sortDir === 'asc' ? -1 : 1;
         if (av > bv) return sortDir === 'asc' ? 1 : -1;
@@ -1072,7 +1071,7 @@ function renderTable() {
     tbody.innerHTML = filtered.map((p, idx) => {
         const isDup = duplicateSerials.has(p.serial);
         const noteShort = p.notes ? (p.notes.length > 20 ? p.notes.substring(0,20) + '...' : p.notes) : '-';
-        return '<tr class="' + (idx === 0 ? 'new-row ' : '') + (isDup ? 'duplicate' : '') + '"><td>#' + p.id + '</td><td class="serial-cell"><strong>' + escapeHtml(p.serial) + '</strong></td><td>' + escapeHtml(p.model) + '</td><td>' + p.warranty + ' سنوات</td><td>' + p.date + '</td><td>' + escapeHtml(p.location) + '</td><td>' + escapeHtml(p.project) + '</td><td>' + escapeHtml(p.customer) + '</td><td title="' + escapeHtml(p.notes || '') + '">' + escapeHtml(noteShort) + '</td><td><button class="action-btn" onclick="deletePanel(' + p.id + ')" title="حذف"><i class="fas fa-trash"></i></button></td></tr>';
+        return '<tr class="' + (idx === 0 ? 'new-row ' : '') + (isDup ? 'duplicate' : '') + '"><td>#' + p.id + '</td><td class="serial-cell"><strong>' + escapeHtml(p.serial) + '</strong></td><td>' + escapeHtml(p.model) + '</td><td>' + escapeHtml(String(p.warranty || '-')) + '</td><td>' + p.date + '</td><td>' + escapeHtml(p.location) + '</td><td>' + escapeHtml(p.project) + '</td><td>' + escapeHtml(p.customer) + '</td><td title="' + escapeHtml(p.notes || '') + '">' + escapeHtml(noteShort) + '</td><td><button class="action-btn" onclick="deletePanel(' + p.id + ')" title="حذف"><i class="fas fa-trash"></i></button></td></tr>';
     }).join('');
     document.getElementById('footerCount').textContent = filtered.length + ' عنصر';
 }
@@ -1139,8 +1138,8 @@ function _exportSummary() {
 function exportExcel() {
     if (!panels.length) { showToast('لا توجد بيانات', 'warning'); return; }
     const s = _exportSummary();
-    const headers = ['#','الرقم التسلسلي','الموديل','الضمان (سنوات)','تاريخ التركيب','الوقت','الموقع','المشروع','العميل','الحالة','ملاحظات'];
-    const rows = panels.map((p,i) => [i+1, p.serial, p.model, Number(p.warranty)||p.warranty, p.date, p.time, p.location, p.project, p.customer, p.status, p.notes||'']);
+    const headers = ['#','الرقم التسلسلي','الموديل','المجموعة (String)','تاريخ التركيب','الوقت','الموقع','المشروع','العميل','الحالة','ملاحظات'];
+    const rows = panels.map((p,i) => [i+1, p.serial, p.model, p.warranty || '-', p.date, p.time, p.location, p.project, p.customer, p.status, p.notes||'']);
 
     const aoa = [
         ['نظام إدارة ضمان الألواح الشمسية'],
@@ -1218,7 +1217,7 @@ function _buildPdfHTML() {
             <td>${i+1}</td>
             <td style="font-weight:700;font-family:monospace">${esc(p.serial)}</td>
             <td>${esc(p.model)}</td>
-            <td>${esc(p.warranty)} سنوات</td>
+            <td>${esc(p.warranty) || '-'}</td>
             <td>${esc(p.date)}</td>
             <td>${esc(p.location)}</td>
             <td>${esc(p.project)}</td>
@@ -1268,7 +1267,7 @@ function _buildPdfHTML() {
             <table style="width:100%;border-collapse:separate;border-spacing:0;font-size:11.5px;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden">
                 <thead>
                     <tr style="background:#1f2937;color:#fff">
-                        ${['#','الرقم التسلسلي','الموديل','الضمان','التاريخ','الموقع','المشروع','العميل','الحالة']
+                        ${['#','الرقم التسلسلي','الموديل','المجموعة','التاريخ','الموقع','المشروع','العميل','الحالة']
                             .map(h => `<th style="padding:11px 8px;font-weight:700;text-align:center">${h}</th>`).join('')}
                     </tr>
                 </thead>
