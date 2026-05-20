@@ -1139,17 +1139,18 @@ function _buildPdfHTML() {
     const s = _exportSummary();
     const fmtDate = new Date().toLocaleString('ar-SA');
     const statusColor = st => st === 'نشط' ? '#10b981' : st === 'منتهي' ? '#ef4444' : '#6b7280';
+    const esc = (v) => escapeHtml(v == null ? '' : String(v));
     const rowsHtml = panels.map((p,i) => `
         <tr>
             <td>${i+1}</td>
-            <td style="font-weight:700;font-family:monospace">${p.serial||''}</td>
-            <td>${p.model||''}</td>
-            <td>${p.warranty||''} سنوات</td>
-            <td>${p.date||''}</td>
-            <td>${p.location||''}</td>
-            <td>${p.project||''}</td>
-            <td>${p.customer||''}</td>
-            <td><span class="badge" style="background:${statusColor(p.status)}1a;color:${statusColor(p.status)};border:1px solid ${statusColor(p.status)}55">${p.status||'—'}</span></td>
+            <td style="font-weight:700;font-family:monospace">${esc(p.serial)}</td>
+            <td>${esc(p.model)}</td>
+            <td>${esc(p.warranty)} سنوات</td>
+            <td>${esc(p.date)}</td>
+            <td>${esc(p.location)}</td>
+            <td>${esc(p.project)}</td>
+            <td>${esc(p.customer)}</td>
+            <td><span class="badge" style="background:${statusColor(p.status)}1a;color:${statusColor(p.status)};border:1px solid ${statusColor(p.status)}55">${esc(p.status) || '—'}</span></td>
         </tr>
     `).join('');
 
