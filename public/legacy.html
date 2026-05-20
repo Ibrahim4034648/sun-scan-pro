@@ -1138,8 +1138,8 @@ function _exportSummary() {
 function exportExcel() {
     if (!panels.length) { showToast('لا توجد بيانات', 'warning'); return; }
     const s = _exportSummary();
-    const headers = ['#','الرقم التسلسلي','الموديل','الضمان (سنوات)','تاريخ التركيب','الوقت','الموقع','المشروع','العميل','الحالة','ملاحظات'];
-    const rows = panels.map((p,i) => [i+1, p.serial, p.model, Number(p.warranty)||p.warranty, p.date, p.time, p.location, p.project, p.customer, p.status, p.notes||'']);
+    const headers = ['#','الرقم التسلسلي','الموديل','المجموعة (String)','تاريخ التركيب','الوقت','الموقع','المشروع','العميل','الحالة','ملاحظات'];
+    const rows = panels.map((p,i) => [i+1, p.serial, p.model, p.warranty || '-', p.date, p.time, p.location, p.project, p.customer, p.status, p.notes||'']);
 
     const aoa = [
         ['نظام إدارة ضمان الألواح الشمسية'],
