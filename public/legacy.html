@@ -1217,7 +1217,7 @@ function _buildPdfHTML() {
             <td>${i+1}</td>
             <td style="font-weight:700;font-family:monospace">${esc(p.serial)}</td>
             <td>${esc(p.model)}</td>
-            <td>${esc(p.warranty)} سنوات</td>
+            <td>${esc(p.warranty) || '-'}</td>
             <td>${esc(p.date)}</td>
             <td>${esc(p.location)}</td>
             <td>${esc(p.project)}</td>
