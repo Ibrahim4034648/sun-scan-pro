@@ -750,19 +750,213 @@ function cancelNewItem(kind) {
 // ===================== INIT =====================
 document.addEventListener('DOMContentLoaded', () => {
     loadFromStorage();
+    loadProjects();
     populateCameras();
-    updateStats();
-    renderTable();
-    updateFilters();
     populateModelSelect();
     populateCustomerSelect();
     populateProjectSelect();
     populateLocationSelect();
+    renderProjectsScreen();
+    // restore previously-opened project if any
+    const last = localStorage.getItem('solarCurrentProject_v1');
+    if (last && projectsList.some(p => String(p.id) === String(last))) {
+        openProject(last);
+    } else {
+        showProjectsView();
+    }
     document.getElementById('manualSerial').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') { e.preventDefault(); manualScan(); }
     });
     keepScreenAwake();
 });
+
+// ===================== PROJECTS =====================
+let projectsList = [];
+let currentProject = null;
+
+function loadProjects() {
+    try {
+        const raw = localStorage.getItem('solarProjects_v1');
+        const arr = raw ? JSON.parse(raw) : [];
+        projectsList = Array.isArray(arr) ? arr : [];
+    } catch(e) { projectsList = []; }
+    // Seed from legacy storedProjects on first run so existing names appear as cards
+    if (!projectsList.length && Array.isArray(storedProjects) && storedProjects.length) {
+        projectsList = storedProjects.map((name, i) => ({
+            id: 'p_' + Date.now() + '_' + i,
+            name: name,
+            customer: storedCustomers[0] || '',
+            date: new Date().toISOString().slice(0,10),
+            createdAt: Date.now()
+        }));
+        saveProjects();
+    }
+}
+function saveProjects() {
+    try { localStorage.setItem('solarProjects_v1', JSON.stringify(projectsList)); } catch(e) {}
+}
+
+function showProjectsView() {
+    currentProject = null;
+    localStorage.removeItem('solarCurrentProject_v1');
+    document.body.classList.add('view-projects');
+    document.body.classList.remove('view-main');
+    renderProjectsScreen();
+}
+function exitToProjects() { showProjectsView(); }
+
+function showMainView() {
+    document.body.classList.add('view-main');
+    document.body.classList.remove('view-projects');
+}
+
+function projectPanelCount(projectName) {
+    return panels.filter(p => p.project === projectName).length;
+}
+
+function renderProjectsScreen() {
+    const grid = document.getElementById('projectsGrid');
+    if (!grid) return;
+    let html = '';
+    if (!projectsList.length) {
+        html += '<div class="projects-empty" style="grid-column:1/-1"><i class="fas fa-folder-open"></i><p>لا توجد مشاريع بعد</p><p style="font-size:12px;margin-top:6px">اضغط "إضافة مشروع جديد" للبدء</p></div>';
+    } else {
+        projectsList.forEach(p => {
+            const count = projectPanelCount(p.name);
+            html += `
+            <div class="project-card" onclick="openProject('${p.id}')">
+                <div style="display:flex;gap:12px;align-items:flex-start">
+                    <div class="pc-icon"><i class="fas fa-solar-panel"></i></div>
+                    <div style="flex:1;min-width:0">
+                        <div class="pc-name">${escapeHtml(p.name)}</div>
+                    </div>
+                </div>
+                <div class="pc-meta">
+                    <span><i class="fas fa-user"></i> ${escapeHtml(p.customer || '—')}</span>
+                    <span><i class="fas fa-calendar"></i> ${escapeHtml(p.date || '—')}</span>
+                </div>
+                <div class="pc-footer">
+                    <span class="pc-count"><b>${count}</b> لوح مسجل</span>
+                    <button class="pc-del" onclick="event.stopPropagation();deleteProject('${p.id}')" title="حذف"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>`;
+        });
+    }
+    html += `
+    <div class="project-card project-card-add" onclick="openProjectModal()">
+        <i class="fas fa-plus-circle"></i>
+        <div>إضافة مشروع جديد</div>
+    </div>`;
+    grid.innerHTML = html;
+}
+
+function openProject(id) {
+    const p = projectsList.find(x => String(x.id) === String(id));
+    if (!p) return;
+    currentProject = p;
+    localStorage.setItem('solarCurrentProject_v1', p.id);
+    document.getElementById('apbName').textContent = p.name;
+    document.getElementById('apbMeta').textContent = `العميل: ${p.customer || '—'} · بدأ: ${p.date || '—'}`;
+    // scope filter to this project
+    const fp = document.getElementById('filterProject');
+    if (fp) {
+        // ensure option exists, then select
+        let exists = Array.from(fp.options).some(o => o.value === p.name);
+        if (!exists) { const o = document.createElement('option'); o.value = p.name; o.textContent = p.name; fp.appendChild(o); }
+        fp.value = p.name;
+    }
+    showMainView();
+    updateStats();
+    renderTable();
+    updateFilters();
+    // re-apply project filter after updateFilters rebuilt the select
+    if (fp) fp.value = p.name;
+    renderTable();
+}
+
+function openProjectModal() {
+    // populate customer select with stored list
+    const sel = document.getElementById('pmCustomer');
+    let html = '<option value="">-- اختر --</option>';
+    storedCustomers.forEach(c => { html += '<option value="' + escapeHtml(c) + '">' + escapeHtml(c) + '</option>'; });
+    html += '<option value="__new__">+ إضافة عميل جديد</option>';
+    sel.innerHTML = html;
+    document.getElementById('pmName').value = '';
+    document.getElementById('pmDate').value = new Date().toISOString().slice(0,10);
+    document.getElementById('pmNewCustomerRow').classList.remove('show');
+    document.getElementById('pmNewCustomerInput').value = '';
+    document.getElementById('projectModal').classList.add('show');
+    setTimeout(() => document.getElementById('pmName').focus(), 50);
+}
+function closeProjectModal() {
+    document.getElementById('projectModal').classList.remove('show');
+}
+
+function saveModalNewCustomer() {
+    const input = document.getElementById('pmNewCustomerInput');
+    const val = (input.value || '').trim();
+    if (!val) { showToast('أدخل اسم العميل', 'error'); input.focus(); return; }
+    if (val.length > 100) { showToast('الاسم طويل جداً', 'error'); return; }
+    if (!storedCustomers.includes(val)) { storedCustomers.push(val); saveStoredCustomers(); }
+    // refresh modal customer select
+    const sel = document.getElementById('pmCustomer');
+    let html = '<option value="">-- اختر --</option>';
+    storedCustomers.forEach(c => { html += '<option value="' + escapeHtml(c) + '">' + escapeHtml(c) + '</option>'; });
+    html += '<option value="__new__">+ إضافة عميل جديد</option>';
+    sel.innerHTML = html;
+    sel.value = val;
+    document.getElementById('pmNewCustomerRow').classList.remove('show');
+    input.value = '';
+    // also refresh main form customer dropdown if visible
+    populateCustomerSelect();
+    showToast('تم حفظ العميل: ' + val, 'success');
+}
+function cancelModalNewCustomer() {
+    document.getElementById('pmNewCustomerRow').classList.remove('show');
+    document.getElementById('pmNewCustomerInput').value = '';
+    const sel = document.getElementById('pmCustomer');
+    if (sel.value === '__new__') sel.value = '';
+}
+
+function saveProject() {
+    const name = (document.getElementById('pmName').value || '').trim();
+    const customer = (function(){
+        const sel = document.getElementById('pmCustomer');
+        if (sel.value === '__new__') return (document.getElementById('pmNewCustomerInput').value || '').trim();
+        return sel.value;
+    })();
+    const date = document.getElementById('pmDate').value;
+    if (!name) { showToast('أدخل اسم المشروع', 'error'); return; }
+    if (name.length > 100) { showToast('اسم المشروع طويل جداً', 'error'); return; }
+    if (!customer) { showToast('اختر العميل', 'error'); return; }
+    if (!date) { showToast('أدخل التاريخ', 'error'); return; }
+    if (projectsList.some(p => p.name === name)) { showToast('اسم المشروع موجود مسبقاً', 'error'); return; }
+    // ensure customer stored
+    if (!storedCustomers.includes(customer)) { storedCustomers.push(customer); saveStoredCustomers(); populateCustomerSelect(); }
+    // ensure project name stored for filters
+    if (!storedProjects.includes(name)) { storedProjects.push(name); saveStoredProjects(); populateProjectSelect(); }
+    const proj = { id: 'p_' + Date.now(), name, customer, date, createdAt: Date.now() };
+    projectsList.unshift(proj);
+    saveProjects();
+    closeProjectModal();
+    renderProjectsScreen();
+    showToast('تم إنشاء المشروع: ' + name, 'success');
+}
+
+function deleteProject(id) {
+    const p = projectsList.find(x => String(x.id) === String(id));
+    if (!p) return;
+    const count = projectPanelCount(p.name);
+    let msg = 'حذف المشروع "' + p.name + '"؟';
+    if (count) msg += '\n\nيوجد ' + count + ' لوح مرتبط بهذا المشروع، سيتم الاحتفاظ بسجلات الألواح.';
+    if (!confirm(msg)) return;
+    projectsList = projectsList.filter(x => String(x.id) !== String(id));
+    saveProjects();
+    renderProjectsScreen();
+    showToast('تم حذف المشروع', 'warning');
+}
+
+
 
 function keepScreenAwake() {
     if ('wakeLock' in navigator) {
