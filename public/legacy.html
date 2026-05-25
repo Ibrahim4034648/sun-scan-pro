@@ -567,39 +567,8 @@ s="header">
     <div class="form-section">
         <div class="section-title"><i class="fas fa-edit"></i> تفاصيل التركيب</div>
         <div class="form-grid">
-            <div class="form-group">
-                <label>العميل</label>
-                <select id="customerName" onchange="handleSelectChange('customerName','newCustomerInput','newCustomerRow')">
-                    <option value="">-- اختر --</option>
-                    <option value="مؤسسة صلة" selected>مؤسسة صلة</option>
-                    <option value="__new__">+ إضافة جديد</option>
-                </select>
-                <div id="newCustomerRow" class="new-row">
-                    <input type="text" id="newCustomerInput" class="new-input" placeholder="اسم العميل الجديد">
-                    <button type="button" class="save-new" onclick="saveNewItem('customer')"><i class="fas fa-check"></i> حفظ</button>
-                    <button type="button" class="cancel-new" onclick="cancelNewItem('customer')" title="إلغاء"><i class="fas fa-times"></i></button>
-                </div>
-            </div>
-            <div class="form-group">
-                <label>المشروع</label>
-                <select id="projectName" onchange="handleSelectChange('projectName','newProjectInput','newProjectRow')">
-                    <option value="">-- اختر --</option>
-                    <option value="مشروع القويرة">مشروع القويرة</option>
-                    <option value="مشروع الرحاب">مشروع الرحاب</option>
-                    <option value="مشروع فلك 1">مشروع فلك 1</option>
-                    <option value="مشروع فلك 2">مشروع فلك 2</option>
-                    <option value="مشروع فلك 3">مشروع فلك 3</option>
-                    <option value="مشروع فلك 4">مشروع فلك 4</option>
-                    <option value="مشروع فلك 5">مشروع فلك 5</option>
-                    <option value="مشروع فلك 6">مشروع فلك 6</option>
-                    <option value="__new__">+ إضافة جديد</option>
-                </select>
-                <div id="newProjectRow" class="new-row">
-                    <input type="text" id="newProjectInput" class="new-input" placeholder="اسم المشروع الجديد">
-                    <button type="button" class="save-new" onclick="saveNewItem('project')"><i class="fas fa-check"></i> حفظ</button>
-                    <button type="button" class="cancel-new" onclick="cancelNewItem('project')" title="إلغاء"><i class="fas fa-times"></i></button>
-                </div>
-            </div>
+            <!-- العميل والمشروع تنتقل لشاشة المشاريع وتطبّق تلقائياً -->
+
             <div class="form-group">
                 <label>الموقع</label>
                 <select id="installLocation" onchange="handleSelectChange('installLocation','newLocationInput','newLocationRow')">
