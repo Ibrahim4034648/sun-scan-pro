@@ -1291,8 +1291,9 @@ function manualScan() {
         date: now.toLocaleDateString('ar-SA'),
         time: now.toLocaleTimeString('ar-SA', {hour:'2-digit', minute:'2-digit'}),
         timestamp: now.getTime(),
-        customer: getSelectValue('customerName','newCustomerInput','مؤسسة صلة'),
-        project: getSelectValue('projectName','newProjectInput','غير محدد'),
+        customer: (currentProject && currentProject.customer) || 'غير محدد',
+        project: (currentProject && currentProject.name) || 'غير محدد',
+
         location: getSelectValue('installLocation','newLocationInput','حقل الألواح'),
         warranty: document.getElementById('warrantyPeriod').value,
         notes: document.getElementById('notes').value.trim(),
