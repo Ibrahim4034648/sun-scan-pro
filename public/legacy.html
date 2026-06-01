@@ -1245,7 +1245,7 @@ async function toggleTorch() {
         const isOn = currentVideoTrack.getSettings().torch || false;
         await currentVideoTrack.applyConstraints({ advanced: [{ torch: !isOn }] });
         const btn = document.getElementById('torchBtn');
-        btn.style.background = !isOn ? 'var(--warning)' : '#1f2937';
+        btn.style.background = !isOn ? 'var(--warning)' : 'var(--brand-dark)';
         showToast(!isOn ? 'الفلاش مفعّل' : 'الفلاش مطفأ', 'success');
     } catch(e) { showToast('تعذر تفعيل الفلاش', 'warning'); }
 }
