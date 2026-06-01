@@ -3,30 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="theme-color" content="#f97316">
+    <meta name="theme-color" content="#FF8A00">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
-    <title>نظام إدارة ضمان الألواح الشمسية</title>
+    <title>SPWMS — Solar Panel Warranty Management System</title>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <style>
         :root {
-            --bg: #f0f1f3; --card-bg: #ffffff; --text-primary: #1a1a2e; --text-secondary: #6b7280;
-            --border: #e5e7eb; --solar-orange: #f97316; --solar-orange-light: #fff7ed; --solar-orange-dark: #ea580c;
-            --accent-blue: #0ea5e9; --success: #10b981; --success-light: #d1fae5;
-            --danger: #ef4444; --danger-light: #fee2e2; --warning: #f59e0b; --warning-light: #fef3c7;
-            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05); --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
-            --shadow-lg: 0 10px 15px rgba(0,0,0,0.1); --radius: 12px;
+            --bg: #f4f5f7; --card-bg: #ffffff; --text-primary: #0F141B; --text-secondary: #5b6470;
+            --border: #e5e7eb; --solar-orange: #FF8A00; --solar-orange-light: #fff3e0; --solar-orange-dark: #e57a00;
+            --brand-dark: #0F141B; --accent-blue: #3B82F6; --success: #22C55E; --success-light: #dcfce7;
+            --danger: #EF4444; --danger-light: #fee2e2; --warning: #F59E0B; --warning-light: #fef3c7;
+            --shadow-sm: 0 1px 2px rgba(15,20,27,0.06); --shadow-md: 0 4px 6px rgba(15,20,27,0.08);
+            --shadow-lg: 0 10px 15px rgba(15,20,27,0.10); --radius: 12px;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: 'Cairo', 'Space Grotesk', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: var(--bg); color: var(--text-primary); line-height: 1.5; min-height: 100vh;
             padding-bottom: env(safe-area-inset-bottom);
         }
@@ -39,10 +39,11 @@
         }
         .header-left { display: flex; align-items: center; gap: 10px; }
         .logo-icon {
-            width: 38px; height: 38px; background: linear-gradient(135deg, var(--solar-orange), var(--solar-orange-dark));
+            width: 42px; height: 42px; background: var(--brand-dark);
             border-radius: 10px; display: flex; align-items: center; justify-content: center;
-            color: white; font-size: 18px; flex-shrink: 0;
+            color: white; flex-shrink: 0; box-shadow: 0 2px 6px rgba(255,138,0,0.25);
         }
+        .header-title, .section-title { font-family: 'Space Grotesk','Cairo',sans-serif; letter-spacing: 0.2px; }
         .header-title { font-size: 15px; font-weight: 800; }
         .header-subtitle { font-size: 11px; color: var(--text-secondary); }
         .header-actions { display: flex; gap: 6px; }
@@ -97,7 +98,7 @@
             position: absolute; top: 50%; left: 50%;
             transform: translate(-50%, -50%);
             width: 260px; height: 160px;
-            border: 2px solid rgba(249,115,22,0.6);
+            border: 2px solid rgba(255,138,0,0.6);
             border-radius: 8px; pointer-events: none; z-index: 5;
         }
         .scan-frame::before, .scan-frame::after {
@@ -195,14 +196,14 @@
             outline: none; transition: all 0.2s;
         }
         .form-group select:focus, .form-group input:focus, .form-group textarea:focus {
-            border-color: var(--solar-orange); box-shadow: 0 0 0 3px rgba(249,115,22,0.1);
+            border-color: var(--solar-orange); box-shadow: 0 0 0 3px rgba(255,138,0,0.1);
         }
         .form-group textarea { resize: vertical; min-height: 50px; }
         .form-group .new-input { margin-top: 6px; display: none; }
         .new-row { display: none; gap: 6px; margin-top: 6px; }
         .new-row.show { display: flex; }
         .new-row .new-input { display: block; margin-top: 0; flex: 1; }
-        .new-row .save-new { background: linear-gradient(135deg,#f97316,#ea580c); color:#fff; border:none; padding:0 14px; border-radius:10px; font-weight:700; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; white-space:nowrap; }
+        .new-row .save-new { background: linear-gradient(135deg,#FF8A00,#e57a00); color:#fff; border:none; padding:0 14px; border-radius:10px; font-weight:700; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; white-space:nowrap; }
         .new-row .save-new:hover { filter: brightness(1.08); }
         .new-row .cancel-new { background:#f3f4f6; color:#374151; border:1px solid #e5e7eb; padding:0 12px; border-radius:10px; cursor:pointer; }
 
@@ -402,14 +403,14 @@
 <body class="view-projects">
 <div clas
     <!-- Permission Request Overlay -->
-    <div id="permissionOverlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:linear-gradient(135deg,#1a1a2e 0%,#2d2d44 100%);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;text-align:center;color:white;">
-        <div style="width:80px;height:80px;background:linear-gradient(135deg,#f97316,#ea580c);border-radius:20px;display:flex;align-items:center;justify-content:center;margin-bottom:24px;font-size:36px;">☀</div>
+    <div id="permissionOverlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:linear-gradient(135deg,#0F141B 0%,#1a212c 100%);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;text-align:center;color:white;">
+        <div style="width:80px;height:80px;background:linear-gradient(135deg,#FF8A00,#e57a00);border-radius:20px;display:flex;align-items:center;justify-content:center;margin-bottom:24px;font-size:36px;">☀</div>
         <h1 style="font-size:22px;font-weight:800;margin-bottom:8px;">نظام إدارة ضمان الألواح الشمسية</h1>
         <p style="font-size:14px;color:#9ca3af;margin-bottom:32px;max-width:320px;">التطبيق يحتاج إلى الوصول للكاميرا لمسح الباركود والميكروفون للتأكد من عمل الجهاز</p>
 
         <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:20px;margin-bottom:24px;max-width:360px;width:100%;border:1px solid rgba(255,255,255,0.1);">
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-                <div style="width:40px;height:40px;background:rgba(249,115,22,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#f97316;font-size:18px;"><i class="fas fa-camera"></i></div>
+                <div style="width:40px;height:40px;background:rgba(255,138,0,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#FF8A00;font-size:18px;"><i class="fas fa-camera"></i></div>
                 <div style="text-align:right;flex:1;">
                     <div style="font-size:14px;font-weight:700;">الكاميرا</div>
                     <div style="font-size:12px;color:#9ca3af;">لقراءة الباركود على الألواح الشمسية</div>
@@ -426,7 +427,7 @@
             </div>
         </div>
 
-        <button id="grantBtn" onclick="requestPermissions()" style="background:#f97316;color:white;border:none;padding:14px 40px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;transition:all 0.2s;width:100%;max-width:300px;margin-bottom:12px;">
+        <button id="grantBtn" onclick="requestPermissions()" style="background:#FF8A00;color:white;border:none;padding:14px 40px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;transition:all 0.2s;width:100%;max-width:300px;margin-bottom:12px;">
             <i class="fas fa-check-circle"></i> السماح بالوصول
         </button>
         <button onclick="skipPermissions()" style="background:transparent;color:#9ca3af;border:none;padding:10px;font-size:13px;cursor:pointer;">
@@ -436,10 +437,22 @@
     </div>
 s="header">
     <div class="header-left">
-        <div class="logo-icon"><i class="fas fa-solar-panel"></i></div>
+        <div class="logo-icon" aria-label="SPWMS">
+            <svg viewBox="0 0 48 56" width="26" height="30" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M24 2 L44 10 V28 C44 40 35 50 24 54 C13 50 4 40 4 28 V10 Z" fill="#0F141B"/>
+                <g transform="translate(11,12)">
+                    <rect x="0" y="0" width="26" height="20" rx="2" fill="#ffffff"/>
+                    <line x1="8.6" y1="0" x2="8.6" y2="20" stroke="#0F141B" stroke-width="1"/>
+                    <line x1="17.3" y1="0" x2="17.3" y2="20" stroke="#0F141B" stroke-width="1"/>
+                    <line x1="0" y1="6.6" x2="26" y2="6.6" stroke="#0F141B" stroke-width="1"/>
+                    <line x1="0" y1="13.3" x2="26" y2="13.3" stroke="#0F141B" stroke-width="1"/>
+                </g>
+                <path d="M22 34 L30 34 L25 44 L33 44 L18 56 L23 46 L17 46 Z" fill="#FF8A00"/>
+            </svg>
+        </div>
         <div>
-            <div class="header-title">نظام إدارة ضمان الألواح الشمسية</div>
-            <div class="header-subtitle">مسح · تخزين · تصدير</div>
+            <div class="header-title">SPWMS <span style="color:var(--solar-orange)">·</span> ضمان الألواح الشمسية</div>
+            <div class="header-subtitle">Scan · Track · Protect · Manage</div>
         </div>
     </div>
     <div class="header-actions">
@@ -1525,7 +1538,7 @@ function _buildPdfHTML() {
 
     return `
     <div id="pdfReport" style="width:1100px;padding:0;background:#fff;color:#111827;font-family:'Cairo',sans-serif;direction:rtl">
-        <div style="background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;padding:28px 36px;display:flex;justify-content:space-between;align-items:center;border-radius:0">
+        <div style="background:linear-gradient(135deg,#FF8A00,#e57a00);color:#fff;padding:28px 36px;display:flex;justify-content:space-between;align-items:center;border-radius:0">
             <div>
                 <div style="font-size:13px;opacity:.9;letter-spacing:1px">SOLAR WARRANTY SYSTEM</div>
                 <div style="font-size:26px;font-weight:800;margin-top:4px">تقرير ضمان الألواح الشمسية</div>
@@ -1536,7 +1549,7 @@ function _buildPdfHTML() {
 
         <div style="padding:24px 36px 0;display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
             ${[
-                ['الإجمالي', s.total, '#f97316'],
+                ['الإجمالي', s.total, '#FF8A00'],
                 ['نشط', s.active, '#10b981'],
                 ['اليوم', s.todayCount, '#3b82f6'],
                 ['مكرر', s.dup, '#ef4444']
@@ -1560,7 +1573,7 @@ function _buildPdfHTML() {
         </div>
 
         <div style="padding:22px 36px 36px">
-            <div style="font-size:15px;font-weight:700;color:#1f2937;margin-bottom:10px;border-right:4px solid #f97316;padding-right:10px">تفاصيل الألواح المسجلة</div>
+            <div style="font-size:15px;font-weight:700;color:#1f2937;margin-bottom:10px;border-right:4px solid #FF8A00;padding-right:10px">تفاصيل الألواح المسجلة</div>
             <table style="width:100%;border-collapse:separate;border-spacing:0;font-size:11.5px;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden">
                 <thead>
                     <tr style="background:#1f2937;color:#fff">
