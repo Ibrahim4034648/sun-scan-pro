@@ -35,8 +35,8 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-surface: var(--surface);
-  --font-sans: "Tajawal", "Inter", system-ui, sans-serif;
-  --font-display: "Cairo", "Tajawal", system-ui, sans-serif;
+  --font-sans: "Inter", "Cairo", "Tajawal", system-ui, sans-serif;
+  --font-display: "Space Grotesk", "Cairo", "Tajawal", system-ui, sans-serif;
   --shadow-elegant: 0 10px 40px -10px color-mix(in oklab, var(--primary) 25%, transparent);
   --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.04);
 }
