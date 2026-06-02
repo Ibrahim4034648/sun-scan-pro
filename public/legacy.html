@@ -400,6 +400,21 @@
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script>
+    // Auth gate: if visitor hits /legacy.html directly without a Supabase session, bounce to /auth
+    (function(){
+      try {
+        var raw = localStorage.getItem('sb-ejsxhgnopgeloyqmeinq-auth-token');
+        var ok = false;
+        if (raw) {
+          var s = JSON.parse(raw);
+          var exp = s && (s.expires_at || (s.currentSession && s.currentSession.expires_at));
+          if (exp && exp * 1000 > Date.now()) ok = true;
+        }
+        if (!ok) { window.location.replace('/auth'); document.documentElement.style.display='none'; }
+      } catch(e) { window.location.replace('/auth'); }
+    })();
+    </script>
 </head>
 <body class="view-projects">
 <div clas
@@ -1379,7 +1394,7 @@ function renderTable() {
     tbody.innerHTML = filtered.map((p, idx) => {
         const isDup = duplicateSerials.has(p.serial);
         const noteShort = p.notes ? (p.notes.length > 20 ? p.notes.substring(0,20) + '...' : p.notes) : '-';
-        return '<tr class="' + (idx === 0 ? 'new-row ' : '') + (isDup ? 'duplicate' : '') + '"><td>#' + p.id + '</td><td class="serial-cell"><strong>' + escapeHtml(p.serial) + '</strong></td><td>' + escapeHtml(p.model) + '</td><td>' + escapeHtml(String(p.warranty || '-')) + '</td><td>' + p.date + '</td><td>' + escapeHtml(p.location) + '</td><td>' + escapeHtml(p.project) + '</td><td>' + escapeHtml(p.customer) + '</td><td title="' + escapeHtml(p.notes || '') + '">' + escapeHtml(noteShort) + '</td><td><button class="action-btn" onclick="deletePanel(' + p.id + ')" title="حذف"><i class="fas fa-trash"></i></button></td></tr>';
+        return '<tr class="' + (idx === 0 ? 'new-row ' : '') + (isDup ? 'duplicate' : '') + '"><td>#' + p.id + '</td><td class="serial-cell"><strong>' + escapeHtml(p.serial) + '</strong></td><td>' + escapeHtml(p.model) + '</td><td>' + escapeHtml(String(p.warranty || '-')) + '</td><td>' + escapeHtml(p.date) + '</td><td>' + escapeHtml(p.location) + '</td><td>' + escapeHtml(p.project) + '</td><td>' + escapeHtml(p.customer) + '</td><td title="' + escapeHtml(p.notes || '') + '">' + escapeHtml(noteShort) + '</td><td><button class="action-btn" onclick="deletePanel(' + p.id + ')" title="حذف"><i class="fas fa-trash"></i></button></td></tr>';
     }).join('');
     document.getElementById('footerCount').textContent = filtered.length + ' عنصر';
 }
