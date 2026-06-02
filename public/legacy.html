@@ -399,6 +399,7 @@
             .scanner-actions .btn { flex: 1; }
         }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
 <body class="view-projects">
 <div clas
@@ -1807,6 +1808,209 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(checkExistingPermissions, 500);
 });
 
+// ===================== SUPABASE CLOUD SYNC =====================
+(function(){
+  const SUPABASE_URL = 'https://ejsxhgnopgeloyqmeinq.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqc3hoZ25vcGdlbG95cW1laW5xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMDkyMDcsImV4cCI6MjA5NTg4NTIwN30.ufWanib-pZ1MJfcGfHAdeO6ZzVzBATqClOQm8ry47rw';
+  const STORAGE_KEY = 'sb-ejsxhgnopgeloyqmeinq-auth-token';
+  if (!window.supabase || !window.supabase.createClient) { console.warn('Supabase SDK not loaded'); return; }
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: { storage: window.localStorage, storageKey: STORAGE_KEY, persistSession: true, autoRefreshToken: true }
+  });
+  window.__sb = sb;
+  let userId = null;
+  let projIdMap = new Map(); // local id -> db uuid
+  let projNameToDbId = new Map();
+  let panelDbIdById = new Map(); // local numeric id -> db uuid
+
+  async function getUser() {
+    const { data } = await sb.auth.getUser();
+    return data.user || null;
+  }
+
+  async function fetchAll() {
+    const [{ data: projs, error: pe }, { data: pans, error: ne }] = await Promise.all([
+      sb.from('projects').select('*').order('created_at', { ascending: false }),
+      sb.from('panels').select('*').order('created_at', { ascending: false })
+    ]);
+    if (pe) console.error(pe);
+    if (ne) console.error(ne);
+    // map projects
+    projectsList = (projs || []).map(r => {
+      const localId = 'p_' + r.id;
+      projIdMap.set(localId, r.id);
+      projNameToDbId.set(r.name, r.id);
+      return { id: localId, name: r.name, customer: r.customer, date: r.project_date, createdAt: new Date(r.created_at).getTime() };
+    });
+    // map panels (assign numeric ids for display)
+    panels = (pans || []).map((r, i) => {
+      const localId = i + 1;
+      panelDbIdById.set(localId, r.id);
+      return {
+        id: localId,
+        serial: r.serial,
+        model: r.model || 'غير محدد',
+        date: r.install_date || '',
+        time: r.install_time || '',
+        timestamp: new Date(r.created_at).getTime(),
+        customer: r.customer || 'غير محدد',
+        project: r.project_name || 'غير محدد',
+        location: r.location || 'حقل الألواح',
+        warranty: r.warranty_years || '',
+        notes: r.notes || '',
+        status: r.status || 'نشط',
+        __dbId: r.id
+      };
+    });
+    // refresh stored filter lists from DB content
+    const dbProjects = [...new Set(projectsList.map(p => p.name))];
+    const dbCustomers = [...new Set(projectsList.map(p => p.customer).filter(Boolean))];
+    if (dbProjects.length) storedProjects = [...new Set([...storedProjects, ...dbProjects])];
+    if (dbCustomers.length) storedCustomers = [...new Set([...storedCustomers, ...dbCustomers])];
+    saveStoredProjects(); saveStoredCustomers();
+    try { saveProjects(); saveToStorage(); } catch(e){}
+    renderProjectsScreen();
+    if (typeof updateStats === 'function') updateStats();
+    if (typeof renderTable === 'function') renderTable();
+    if (typeof updateFilters === 'function') updateFilters();
+    if (typeof populateProjectSelect === 'function') populateProjectSelect();
+    if (typeof populateCustomerSelect === 'function') populateCustomerSelect();
+  }
+
+  // ===== Wrap mutations =====
+  const _saveProject = window.saveProject;
+  window.saveProject = async function() {
+    const name = (document.getElementById('pmName').value || '').trim();
+    const sel = document.getElementById('pmCustomer');
+    const customer = sel.value === '__new__' ? (document.getElementById('pmNewCustomerInput').value || '').trim() : sel.value;
+    const date = document.getElementById('pmDate').value;
+    if (!name) { showToast('أدخل اسم المشروع', 'error'); return; }
+    if (!customer) { showToast('اختر العميل', 'error'); return; }
+    if (!date) { showToast('أدخل التاريخ', 'error'); return; }
+    if (projectsList.some(p => p.name === name)) { showToast('اسم المشروع موجود مسبقاً', 'error'); return; }
+    if (!userId) { showToast('يجب تسجيل الدخول', 'error'); return; }
+    const { data, error } = await sb.from('projects').insert({ user_id: userId, name, customer, project_date: date }).select().single();
+    if (error) { showToast('فشل الحفظ: ' + error.message, 'error'); return; }
+    const localId = 'p_' + data.id;
+    projIdMap.set(localId, data.id);
+    projNameToDbId.set(name, data.id);
+    projectsList.unshift({ id: localId, name, customer, date, createdAt: Date.now() });
+    if (!storedCustomers.includes(customer)) { storedCustomers.push(customer); saveStoredCustomers(); populateCustomerSelect(); }
+    if (!storedProjects.includes(name)) { storedProjects.push(name); saveStoredProjects(); populateProjectSelect(); }
+    saveProjects();
+    closeProjectModal();
+    renderProjectsScreen();
+    showToast('تم إنشاء المشروع: ' + name, 'success');
+  };
+
+  const _deleteProject = window.deleteProject;
+  window.deleteProject = async function(id) {
+    const p = projectsList.find(x => String(x.id) === String(id));
+    if (!p) return;
+    const count = projectPanelCount(p.name);
+    let msg = 'حذف المشروع "' + p.name + '"؟';
+    if (count) msg += '\n\nيوجد ' + count + ' لوح مرتبط بهذا المشروع، سيتم الاحتفاظ بسجلات الألواح.';
+    if (!confirm(msg)) return;
+    const dbId = projIdMap.get(id);
+    if (dbId) {
+      const { error } = await sb.from('projects').delete().eq('id', dbId);
+      if (error) { showToast('فشل الحذف: ' + error.message, 'error'); return; }
+    }
+    projectsList = projectsList.filter(x => String(x.id) !== String(id));
+    saveProjects();
+    renderProjectsScreen();
+    showToast('تم حذف المشروع', 'warning');
+  };
+
+  const _manualScan = window.manualScan;
+  window.manualScan = async function() {
+    const input = document.getElementById('manualSerial');
+    const val = cleanSerial(input.value);
+    if (!val) { showToast('يرجى إدخال رقم تسلسلي', 'warning'); return; }
+    input.className = '';
+    if (panels.some(p => p.serial === val)) {
+      duplicateSerials.add(val);
+      input.className = 'scan-error';
+      showToast('رقم مكرر: ' + val, 'error');
+      playBeep('error');
+      updateStats(); renderTable();
+      setTimeout(() => { input.className = ''; input.value = ''; input.focus(); }, 1500);
+      return;
+    }
+    if (!userId) { showToast('يجب تسجيل الدخول', 'error'); return; }
+    const now = new Date();
+    const model = getSelectValue('panelModel','newModelInput','غير محدد');
+    const location = getSelectValue('installLocation','newLocationInput','حقل الألواح');
+    const warranty = document.getElementById('warrantyPeriod').value;
+    const notes = document.getElementById('notes').value.trim();
+    const projectName = (currentProject && currentProject.name) || 'غير محدد';
+    const customer = (currentProject && currentProject.customer) || 'غير محدد';
+    const dbProjectId = projNameToDbId.get(projectName) || null;
+    const { data, error } = await sb.from('panels').insert({
+      user_id: userId, project_id: dbProjectId, project_name: projectName, customer,
+      serial: val, model, warranty_years: warranty ? parseInt(warranty,10) : null,
+      install_date: now.toLocaleDateString('ar-SA'),
+      install_time: now.toLocaleTimeString('ar-SA', {hour:'2-digit', minute:'2-digit'}),
+      location, notes, status: 'نشط'
+    }).select().single();
+    if (error) { showToast('فشل الحفظ: ' + error.message, 'error'); return; }
+    const newId = panels.length > 0 ? Math.max(...panels.map(p => p.id)) + 1 : 1;
+    panelDbIdById.set(newId, data.id);
+    panels.unshift({
+      id: newId, serial: val, model, date: data.install_date, time: data.install_time,
+      timestamp: now.getTime(), customer, project: projectName, location,
+      warranty, notes, status: 'نشط', __dbId: data.id
+    });
+    saveToStorage(); updateStats(); renderTable(); updateFilters();
+    input.value = ''; input.className = ''; input.focus();
+    showToast('تمت الإضافة: ' + val, 'success');
+    playBeep('success');
+    if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
+  };
+
+  const _deletePanel = window.deletePanel;
+  window.deletePanel = async function(id) {
+    if (!confirm('حذف هذا السجل؟')) return;
+    const panel = panels.find(p => p.id === id);
+    const dbId = panel && (panel.__dbId || panelDbIdById.get(id));
+    if (dbId) {
+      const { error } = await sb.from('panels').delete().eq('id', dbId);
+      if (error) { showToast('فشل الحذف: ' + error.message, 'error'); return; }
+    }
+    panels = panels.filter(p => p.id !== id);
+    saveToStorage(); updateStats(); renderTable(); updateFilters();
+    showToast('تم الحذف', 'warning');
+  };
+
+  // ===== Init =====
+  async function init() {
+    const user = await getUser();
+    if (!user) {
+      // No session; the React parent route should have redirected to /auth.
+      return;
+    }
+    userId = user.id;
+    // Clear stale local data from prior localStorage-only mode
+    try {
+      localStorage.removeItem('solarProjects_v1');
+      localStorage.removeItem('solarWarrantyPanels_v2');
+    } catch(e){}
+    projectsList = [];
+    panels = [];
+    await fetchAll();
+  }
+  // Wait for DOMContentLoaded init to finish, then sync from DB
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => setTimeout(init, 100));
+  } else {
+    setTimeout(init, 100);
+  }
+  // Re-sync on auth change
+  sb.auth.onAuthStateChange((_e, session) => {
+    if (session && session.user) { userId = session.user.id; fetchAll(); }
+    else { userId = null; projectsList = []; panels = []; renderProjectsScreen(); renderTable && renderTable(); }
+  });
+})();
 </script>
 </body>
 </html>

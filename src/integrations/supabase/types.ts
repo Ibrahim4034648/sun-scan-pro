@@ -14,6 +14,65 @@ export type Database = {
   }
   public: {
     Tables: {
+      panels: {
+        Row: {
+          created_at: string
+          customer: string | null
+          id: string
+          install_date: string | null
+          install_time: string | null
+          location: string | null
+          model: string | null
+          notes: string | null
+          project_id: string | null
+          project_name: string | null
+          serial: string
+          status: string | null
+          user_id: string
+          warranty_years: number | null
+        }
+        Insert: {
+          created_at?: string
+          customer?: string | null
+          id?: string
+          install_date?: string | null
+          install_time?: string | null
+          location?: string | null
+          model?: string | null
+          notes?: string | null
+          project_id?: string | null
+          project_name?: string | null
+          serial: string
+          status?: string | null
+          user_id: string
+          warranty_years?: number | null
+        }
+        Update: {
+          created_at?: string
+          customer?: string | null
+          id?: string
+          install_date?: string | null
+          install_time?: string | null
+          location?: string | null
+          model?: string | null
+          notes?: string | null
+          project_id?: string | null
+          project_name?: string | null
+          serial?: string
+          status?: string | null
+          user_id?: string
+          warranty_years?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "panels_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -35,6 +94,36 @@ export type Database = {
           email?: string | null
           id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      projects: {
+        Row: {
+          created_at: string
+          customer: string
+          id: string
+          name: string
+          project_date: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          customer: string
+          id?: string
+          name: string
+          project_date: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          customer?: string
+          id?: string
+          name?: string
+          project_date?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
