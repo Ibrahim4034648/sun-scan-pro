@@ -1905,7 +1905,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (projectsList.some(p => p.name === name)) { showToast('اسم المشروع موجود مسبقاً', 'error'); return; }
     if (!userId) { showToast('يجب تسجيل الدخول', 'error'); return; }
     const { data, error } = await sb.from('projects').insert({ user_id: userId, name, customer, project_date: date }).select().single();
-    if (error) { showToast('فشل الحفظ: ' + error.message, 'error'); return; }
+    if (error) { console.error(error); showToast('حدث خطأ أثناء الحفظ. حاول مرة أخرى.', 'error'); return; }
     const localId = 'p_' + data.id;
     projIdMap.set(localId, data.id);
     projNameToDbId.set(name, data.id);
@@ -1929,7 +1929,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const dbId = projIdMap.get(id);
     if (dbId) {
       const { error } = await sb.from('projects').delete().eq('id', dbId);
-      if (error) { showToast('فشل الحذف: ' + error.message, 'error'); return; }
+      if (error) { console.error(error); showToast('حدث خطأ أثناء الحذف. حاول مرة أخرى.', 'error'); return; }
     }
     projectsList = projectsList.filter(x => String(x.id) !== String(id));
     saveProjects();
@@ -1968,7 +1968,7 @@ document.addEventListener('DOMContentLoaded', () => {
       install_time: now.toLocaleTimeString('ar-SA', {hour:'2-digit', minute:'2-digit'}),
       location, notes, status: 'نشط'
     }).select().single();
-    if (error) { showToast('فشل الحفظ: ' + error.message, 'error'); return; }
+    if (error) { console.error(error); showToast('حدث خطأ أثناء الحفظ. حاول مرة أخرى.', 'error'); return; }
     const newId = panels.length > 0 ? Math.max(...panels.map(p => p.id)) + 1 : 1;
     panelDbIdById.set(newId, data.id);
     panels.unshift({
@@ -1990,7 +1990,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const dbId = panel && (panel.__dbId || panelDbIdById.get(id));
     if (dbId) {
       const { error } = await sb.from('panels').delete().eq('id', dbId);
-      if (error) { showToast('فشل الحذف: ' + error.message, 'error'); return; }
+      if (error) { console.error(error); showToast('حدث خطأ أثناء الحذف. حاول مرة أخرى.', 'error'); return; }
     }
     panels = panels.filter(p => p.id !== id);
     saveToStorage(); updateStats(); renderTable(); updateFilters();
