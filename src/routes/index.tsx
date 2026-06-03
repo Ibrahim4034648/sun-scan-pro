@@ -104,7 +104,7 @@ function Welcome() {
 
         {/* CTA Buttons */}
         <button
-          onClick={goApp}
+          onClick={goSignup}
           style={{
             width: "100%",
             marginTop: 18,
@@ -124,11 +124,11 @@ function Welcome() {
             boxShadow: "0 8px 24px rgba(255,138,0,0.4)",
           }}
         >
-          <ScanFrameIcon /> START SCANNING
+          <ScanFrameIcon /> CREATE ACCOUNT
         </button>
 
         <button
-          onClick={goAuth}
+          onClick={goLogin}
           style={{
             width: "100%",
             marginTop: 12,
@@ -150,21 +150,6 @@ function Welcome() {
           <LoginIcon /> LOGIN TO ACCOUNT
         </button>
 
-        <button
-          onClick={goApp}
-          style={{
-            width: "100%",
-            marginTop: 14,
-            padding: 10,
-            background: "transparent",
-            border: "none",
-            color: "#cbd5e1",
-            fontSize: 14,
-            cursor: "pointer",
-          }}
-        >
-          Continue as Guest ›
-        </button>
 
         {/* Trust strip */}
         <div
