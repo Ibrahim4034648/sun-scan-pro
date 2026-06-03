@@ -23,8 +23,8 @@ function Welcome() {
     return () => subscription.unsubscribe();
   }, []);
 
-  const goApp = () => navigate({ to: authed ? "/app" : "/auth" });
-  const goAuth = () => navigate({ to: "/auth" });
+  const goSignup = () => navigate({ to: "/auth", search: { mode: "signup" } });
+  const goLogin = () => navigate({ to: "/auth", search: { mode: "login" } });
 
   return (
     <div
