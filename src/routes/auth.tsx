@@ -3,6 +3,9 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/auth")({
+  validateSearch: (s: Record<string, unknown>) => ({
+    mode: (s.mode === "signup" ? "signup" : "login") as "login" | "signup",
+  }),
   head: () => ({
     meta: [
       { title: "تسجيل الدخول — SPWMS" },
@@ -14,7 +17,8 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"login" | "signup">("login");
+  const search = Route.useSearch();
+  const [mode, setMode] = useState<"login" | "signup">(search.mode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
