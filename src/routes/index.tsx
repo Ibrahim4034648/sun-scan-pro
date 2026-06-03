@@ -62,19 +62,6 @@ function Welcome() {
         {/* Mask phone status bar from hero image */}
         <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 48, background: "#0A0E14" }} />
 
-        <h1 style={{ fontSize: 44, fontWeight: 900, letterSpacing: 4, margin: 0, lineHeight: 1 }}>
-          <span style={{ color: "#fff" }}>SPW</span>
-          <span style={{ color: "#FF8A00" }}>MS</span>
-        </h1>
-        <div style={{ fontSize: 13, letterSpacing: 3, marginTop: 8, color: "#cbd5e1", fontWeight: 600 }}>
-          SOLAR PANEL <span style={{ color: "#FF8A00" }}>WARRANTY</span>
-        </div>
-        <div style={{ fontSize: 11, letterSpacing: 5, marginTop: 4, color: "#94a3b8", fontWeight: 500 }}>
-          MANAGEMENT SYSTEM
-        </div>
-        <div style={{ fontSize: 13, marginTop: 18, color: "#e2e8f0" }}>
-          Scan <span style={{ color: "#FF8A00" }}>•</span> Track <span style={{ color: "#FF8A00" }}>•</span> Protect <span style={{ color: "#FF8A00" }}>•</span> Manage
-        </div>
       </div>
 
       {/* Bottom panel */}
