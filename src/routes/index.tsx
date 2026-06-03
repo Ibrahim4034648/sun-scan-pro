@@ -54,9 +54,10 @@ function Welcome() {
           maxHeight: "52dvh",
           minHeight: 320,
           backgroundImage: `linear-gradient(180deg, #0A0E14 0%, rgba(10,14,20,0) 18%, rgba(10,14,20,0.15) 60%, rgba(10,14,20,0.8) 90%, #0A0E14 100%), url(${heroAsset.url})`,
-          backgroundSize: "auto 78%, cover",
-          backgroundPosition: "center 58%, center 18%",
+          backgroundSize: "100% 100%, auto 78%",
+          backgroundPosition: "center, center 50%",
           backgroundRepeat: "no-repeat, no-repeat",
+          backgroundColor: "#0A0E14",
           position: "relative",
         }}
       >
