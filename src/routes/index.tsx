@@ -23,8 +23,8 @@ function Welcome() {
     return () => subscription.unsubscribe();
   }, []);
 
-  const goApp = () => navigate({ to: authed ? "/app" : "/auth" });
-  const goAuth = () => navigate({ to: "/auth" });
+  const goSignup = () => navigate({ to: "/auth", search: { mode: "signup" } });
+  const goLogin = () => navigate({ to: "/auth", search: { mode: "login" } });
 
   return (
     <div
@@ -47,17 +47,21 @@ function Welcome() {
           width: "100%",
           height: "60vh",
           minHeight: 460,
-          backgroundImage: `linear-gradient(180deg, rgba(10,14,20,0.15) 0%, rgba(10,14,20,0.55) 65%, #0A0E14 100%), url(${heroAsset.url})`,
+          backgroundImage: `linear-gradient(180deg, #0A0E14 0%, rgba(10,14,20,0.0) 8%, rgba(10,14,20,0.15) 30%, rgba(10,14,20,0.55) 70%, #0A0E14 100%), url(${heroAsset.url})`,
           backgroundSize: "cover",
-          backgroundPosition: "center top",
+          backgroundPosition: "center -50px",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "flex-start",
           paddingTop: "8vh",
           textAlign: "center",
+          position: "relative",
         }}
       >
+        {/* Mask phone status bar from hero image */}
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 48, background: "#0A0E14" }} />
+
         <h1 style={{ fontSize: 44, fontWeight: 900, letterSpacing: 4, margin: 0, lineHeight: 1 }}>
           <span style={{ color: "#fff" }}>SPW</span>
           <span style={{ color: "#FF8A00" }}>MS</span>
@@ -104,7 +108,7 @@ function Welcome() {
 
         {/* CTA Buttons */}
         <button
-          onClick={goApp}
+          onClick={goSignup}
           style={{
             width: "100%",
             marginTop: 18,
@@ -124,11 +128,11 @@ function Welcome() {
             boxShadow: "0 8px 24px rgba(255,138,0,0.4)",
           }}
         >
-          <ScanFrameIcon /> START SCANNING
+          <ScanFrameIcon /> CREATE ACCOUNT
         </button>
 
         <button
-          onClick={goAuth}
+          onClick={goLogin}
           style={{
             width: "100%",
             marginTop: 12,
@@ -150,21 +154,6 @@ function Welcome() {
           <LoginIcon /> LOGIN TO ACCOUNT
         </button>
 
-        <button
-          onClick={goApp}
-          style={{
-            width: "100%",
-            marginTop: 14,
-            padding: 10,
-            background: "transparent",
-            border: "none",
-            color: "#cbd5e1",
-            fontSize: 14,
-            cursor: "pointer",
-          }}
-        >
-          Continue as Guest ›
-        </button>
 
         {/* Trust strip */}
         <div
