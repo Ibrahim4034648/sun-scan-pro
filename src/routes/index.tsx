@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import heroAsset from "@/assets/spwms-hero.png.asset.json";
+import heroAsset from "@/assets/spwms-hero-v2.png.asset.json";
 
 export const Route = createFileRoute("/")({
   head: () => ({
