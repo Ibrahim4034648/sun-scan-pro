@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import heroAsset from "@/assets/spwms-hero.png.asset.json";
+import heroAsset from "@/assets/spwms-hero-v2.png.asset.json";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -50,12 +50,12 @@ function Welcome() {
       <div
         style={{
           width: "100%",
-          aspectRatio: "1 / 0.85",
-          maxHeight: "52dvh",
-          minHeight: 320,
-          backgroundImage: `linear-gradient(180deg, #0A0E14 0%, rgba(10,14,20,0) 18%, rgba(10,14,20,0.15) 60%, rgba(10,14,20,0.8) 90%, #0A0E14 100%), url(${heroAsset.url})`,
-          backgroundSize: "100% 100%, auto 78%",
-          backgroundPosition: "center, center 50%",
+          aspectRatio: "863 / 970",
+          maxHeight: "62dvh",
+          minHeight: 360,
+          backgroundImage: `linear-gradient(180deg, rgba(10,14,20,0.55) 0%, rgba(10,14,20,0) 18%, rgba(10,14,20,0) 55%, rgba(10,14,20,0.85) 88%, #0A0E14 100%), url(${heroAsset.url})`,
+          backgroundSize: "100% 100%, cover",
+          backgroundPosition: "center, center",
           backgroundRepeat: "no-repeat, no-repeat",
           backgroundColor: "#0A0E14",
           position: "relative",
