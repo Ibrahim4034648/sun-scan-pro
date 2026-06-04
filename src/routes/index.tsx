@@ -17,16 +17,32 @@ export const Route = createFileRoute("/")({
 
 function Welcome() {
   const navigate = useNavigate();
-  const [, setAuthed] = useState(false);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setAuthed(!!data.session));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => setAuthed(!!s));
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) {
+        navigate({ to: "/welcome" });
+      } else {
+        setReady(true);
+      }
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
+      if (s) navigate({ to: "/welcome" });
+    });
     return () => subscription.unsubscribe();
-  }, []);
+  }, [navigate]);
 
   const goSignup = () => navigate({ to: "/auth", search: { mode: "signup" } });
   const goLogin = () => navigate({ to: "/auth", search: { mode: "login" } });
+
+  if (!ready) {
+    return (
+      <div style={{ position: "fixed", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "#0A0E14", color: "#FF8A00", fontFamily: "'Space Grotesk', sans-serif" }}>
+        ...
+      </div>
+    );
+  }
 
   return (
     <div
