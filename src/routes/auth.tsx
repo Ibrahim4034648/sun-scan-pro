@@ -27,7 +27,7 @@ function AuthPage() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/app" });
+      if (data.session) navigate({ to: "/welcome" });
     });
   }, [navigate]);
 
@@ -50,7 +50,7 @@ function AuthPage() {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       }
-      navigate({ to: "/app" });
+      navigate({ to: "/welcome" });
     } catch (err: any) {
       const msg = err?.message || "حدث خطأ";
       if (msg.includes("Invalid login")) setError("بيانات الدخول غير صحيحة");
