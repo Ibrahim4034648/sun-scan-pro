@@ -64,6 +64,22 @@ function AuthPage() {
     }
   };
 
+  const handleGoogle = async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: `${window.location.origin}/welcome`,
+      });
+      if (result.error) throw result.error;
+      if (result.redirected) return;
+      navigate({ to: "/welcome" });
+    } catch (err: any) {
+      setError(err?.message || "تعذّر تسجيل الدخول عبر Google");
+      setLoading(false);
+    }
+  };
+
   return (
     <div dir="rtl" className="min-h-screen flex items-center justify-center px-4" style={{ background: "linear-gradient(135deg, #0F141B 0%, #1a212c 100%)", fontFamily: "'Space Grotesk', 'Cairo', sans-serif" }}>
       <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl p-8" style={{ boxShadow: "0 20px 60px rgba(0,0,0,0.4)" }}>
