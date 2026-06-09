@@ -99,9 +99,10 @@ export function Scanner({ onScan, continuous = true }: Props) {
   };
 
   const start = async () => {
-    if (!cameraId) { setError("لا توجد كاميرا متاحة"); return; }
     setError(null);
     setStatus("starting");
+    const ok = await ensurePermission();
+    if (!ok) { setStatus("error"); return; }
     try {
       const html5 = new Html5Qrcode(containerId, {
         formatsToSupport: [
@@ -115,8 +116,10 @@ export function Scanner({ onScan, continuous = true }: Props) {
         verbose: false,
       });
       scannerRef.current = html5;
+      // Prefer deviceId when known; fall back to facingMode for iOS Safari first-run.
+      const cameraSource: any = cameraId ? cameraId : { facingMode: { ideal: "environment" } };
       await html5.start(
-        cameraId,
+        cameraSource,
         { fps: 10, qrbox: { width: 260, height: 260 }, aspectRatio: 1 },
         (decoded) => {
           const now = Date.now();
@@ -131,7 +134,11 @@ export function Scanner({ onScan, continuous = true }: Props) {
       setStatus("scanning");
     } catch (e: any) {
       setStatus("error");
-      setError(e?.message ?? "فشل تشغيل الكاميرا");
+      const name = e?.name || "";
+      if (name === "NotAllowedError") setError("تم رفض إذن الكاميرا. فعّله من إعدادات المتصفح.");
+      else if (name === "NotFoundError") setError("لا توجد كاميرا على هذا الجهاز.");
+      else if (name === "NotReadableError") setError("الكاميرا مستخدمة من تطبيق آخر.");
+      else setError(e?.message ?? "فشل تشغيل الكاميرا");
     }
   };
 
