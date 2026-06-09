@@ -21,16 +21,68 @@ export function Scanner({ onScan, continuous = true }: Props) {
   const [sound, setSound] = useState(true);
 
   useEffect(() => {
-    Html5Qrcode.getCameras()
-      .then((devs) => {
-        setCameras(devs);
-        const rear = devs.find((d) => /back|rear|environment/i.test(d.label));
-        setCameraId((rear ?? devs[0])?.id ?? null);
-      })
-      .catch(() => setError("لا يمكن الوصول إلى الكاميرا"));
+    // Try to enumerate cameras without prompting; labels may be empty until permission is granted.
+    if (typeof navigator !== "undefined" && navigator.mediaDevices?.enumerateDevices) {
+      navigator.mediaDevices
+        .enumerateDevices()
+        .then((all) => {
+          const vids = all.filter((d) => d.kind === "videoinput").map((d) => ({ id: d.deviceId, label: d.label || "Camera" }));
+          if (vids.length) {
+            setCameras(vids);
+            const rear = vids.find((d) => /back|rear|environment/i.test(d.label));
+            setCameraId((rear ?? vids[0]).id || null);
+          }
+        })
+        .catch(() => {});
+    }
     return () => { void stop(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const ensurePermission = async (): Promise<boolean> => {
+    if (typeof window === "undefined") return false;
+    const isSecure = window.isSecureContext || location.hostname === "localhost" || location.hostname === "127.0.0.1";
+    if (!isSecure) {
+      setError("الكاميرا تحتاج اتصالاً آمناً (HTTPS). افتح الموقع عبر https://");
+      return false;
+    }
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setError("هذا المتصفح لا يدعم الكاميرا. جرّب Chrome أو Safari الحديث.");
+      return false;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: "environment" } },
+        audio: false,
+      });
+      // Refresh device list now that labels are available.
+      try {
+        const all = await navigator.mediaDevices.enumerateDevices();
+        const vids = all.filter((d) => d.kind === "videoinput").map((d) => ({ id: d.deviceId, label: d.label || "Camera" }));
+        if (vids.length) {
+          setCameras(vids);
+          if (!cameraId) {
+            const rear = vids.find((d) => /back|rear|environment/i.test(d.label));
+            setCameraId((rear ?? vids[0]).id || null);
+          }
+        }
+      } catch {}
+      stream.getTracks().forEach((t) => t.stop());
+      return true;
+    } catch (e: any) {
+      const name = e?.name || "";
+      if (name === "NotAllowedError" || name === "PermissionDeniedError") {
+        setError("تم رفض إذن الكاميرا. فعّله من إعدادات المتصفح ثم أعد المحاولة.");
+      } else if (name === "NotFoundError" || name === "OverconstrainedError") {
+        setError("لم يتم العثور على كاميرا متاحة على هذا الجهاز.");
+      } else if (name === "NotReadableError") {
+        setError("الكاميرا مستخدمة من تطبيق آخر. أغلق التطبيقات الأخرى وحاول مجدداً.");
+      } else {
+        setError(e?.message || "تعذّر الوصول إلى الكاميرا.");
+      }
+      return false;
+    }
+  };
 
   const beep = () => {
     if (!sound) return;
@@ -47,9 +99,10 @@ export function Scanner({ onScan, continuous = true }: Props) {
   };
 
   const start = async () => {
-    if (!cameraId) { setError("لا توجد كاميرا متاحة"); return; }
     setError(null);
     setStatus("starting");
+    const ok = await ensurePermission();
+    if (!ok) { setStatus("error"); return; }
     try {
       const html5 = new Html5Qrcode(containerId, {
         formatsToSupport: [
@@ -63,8 +116,10 @@ export function Scanner({ onScan, continuous = true }: Props) {
         verbose: false,
       });
       scannerRef.current = html5;
+      // Prefer deviceId when known; fall back to facingMode for iOS Safari first-run.
+      const cameraSource: any = cameraId ? cameraId : { facingMode: { ideal: "environment" } };
       await html5.start(
-        cameraId,
+        cameraSource,
         { fps: 10, qrbox: { width: 260, height: 260 }, aspectRatio: 1 },
         (decoded) => {
           const now = Date.now();
@@ -79,7 +134,11 @@ export function Scanner({ onScan, continuous = true }: Props) {
       setStatus("scanning");
     } catch (e: any) {
       setStatus("error");
-      setError(e?.message ?? "فشل تشغيل الكاميرا");
+      const name = e?.name || "";
+      if (name === "NotAllowedError") setError("تم رفض إذن الكاميرا. فعّله من إعدادات المتصفح.");
+      else if (name === "NotFoundError") setError("لا توجد كاميرا على هذا الجهاز.");
+      else if (name === "NotReadableError") setError("الكاميرا مستخدمة من تطبيق آخر.");
+      else setError(e?.message ?? "فشل تشغيل الكاميرا");
     }
   };
 
