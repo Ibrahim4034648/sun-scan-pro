@@ -1086,53 +1086,103 @@ async function populateCameras() {
 
 function showPermissionConsent() {
     return new Promise((resolve) => {
-        if (localStorage.getItem('spwms_perm_consent_v1') === '1') { resolve(true); return; }
+        if (localStorage.getItem('spwms_perm_consent_v2') === '1') { resolve(true); return; }
+
         const overlay = document.createElement('div');
         overlay.id = 'permConsentOverlay';
-        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,20,27,0.85);backdrop-filter:blur(6px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;font-family:inherit;';
-        overlay.innerHTML = `
-            <div style="background:#1a2230;color:#f3f4f6;max-width:420px;width:100%;border-radius:16px;padding:24px;border:1px solid rgba(255,138,0,0.3);box-shadow:0 20px 60px rgba(0,0,0,.5);">
-                <div style="text-align:center;margin-bottom:16px;">
-                    <div style="width:64px;height:64px;margin:0 auto 12px;background:rgba(255,138,0,0.15);border-radius:16px;display:flex;align-items:center;justify-content:center;color:#FF8A00;font-size:28px;">
-                        <i class="fas fa-shield-halved"></i>
-                    </div>
-                    <h2 style="font-size:18px;margin:0 0 6px;font-weight:700;">أذونات مطلوبة لتشغيل الماسح</h2>
-                    <p style="font-size:13px;color:#9ca3af;margin:0;">نحتاج إلى بعض الأذونات لضمان عمل التطبيق بشكل صحيح</p>
-                </div>
-                <div style="display:flex;flex-direction:column;gap:12px;margin:18px 0;">
-                    <div style="display:flex;gap:12px;align-items:flex-start;background:rgba(255,138,0,0.08);padding:12px;border-radius:10px;border-right:3px solid #FF8A00;">
-                        <i class="fas fa-camera" style="color:#FF8A00;font-size:18px;margin-top:2px;"></i>
-                        <div style="flex:1;">
-                            <div style="font-weight:600;font-size:14px;margin-bottom:3px;">الكاميرا</div>
-                            <div style="font-size:12px;color:#c7ccd3;line-height:1.5;">لمسح الأرقام التسلسلية والباركود على الألواح الشمسية مباشرة من الجهاز.</div>
-                        </div>
-                    </div>
-                    <div style="display:flex;gap:12px;align-items:flex-start;background:rgba(255,138,0,0.08);padding:12px;border-radius:10px;border-right:3px solid #FF8A00;">
-                        <i class="fas fa-hard-drive" style="color:#FF8A00;font-size:18px;margin-top:2px;"></i>
-                        <div style="flex:1;">
-                            <div style="font-weight:600;font-size:14px;margin-bottom:3px;">التخزين</div>
-                            <div style="font-size:12px;color:#c7ccd3;line-height:1.5;">لحفظ التقارير المُصدَّرة (Excel / PDF) والنسخ الاحتياطية على جهازك.</div>
-                        </div>
-                    </div>
-                </div>
-                <div style="background:rgba(255,255,255,0.04);padding:10px 12px;border-radius:8px;font-size:11.5px;color:#9ca3af;line-height:1.6;margin-bottom:16px;">
-                    <i class="fas fa-lock" style="color:#10b981;margin-left:4px;"></i>
-                    خصوصيتك محفوظة: لا يتم رفع أي صور أو بيانات إلى خوادم خارجية بدون علمك.
-                </div>
-                <div style="display:flex;gap:8px;">
-                    <button id="permCancelBtn" style="flex:1;padding:12px;border-radius:10px;border:1px solid #374151;background:transparent;color:#e5e7eb;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit;">إلغاء</button>
-                    <button id="permAcceptBtn" style="flex:2;padding:12px;border-radius:10px;border:none;background:#FF8A00;color:#0F141B;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;">
-                        <i class="fas fa-check"></i> أوافق وأتابع
-                    </button>
-                </div>
-            </div>`;
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,20,27,0.88);backdrop-filter:blur(6px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;font-family:inherit;';
         document.body.appendChild(overlay);
-        overlay.querySelector('#permCancelBtn').onclick = () => { overlay.remove(); resolve(false); };
-        overlay.querySelector('#permAcceptBtn').onclick = () => {
-            localStorage.setItem('spwms_perm_consent_v1', '1');
-            overlay.remove();
-            resolve(true);
-        };
+
+        const steps = [
+            {
+                key: 'camera',
+                icon: 'fa-camera',
+                title: 'إذن الكاميرا',
+                subtitle: 'الخطوة 1 من 2',
+                desc: 'يستخدم التطبيق كاميرا جهازك <b>فقط</b> أثناء عملية المسح لقراءة الأرقام التسلسلية والباركود المطبوعة على الألواح الشمسية.',
+                bullets: [
+                    'لا يتم تسجيل أي فيديو أو صورة.',
+                    'لا يتم رفع أي بيانات إلى أي خادم خارجي.',
+                    'يمكنك سحب الإذن في أي وقت من إعدادات المتصفح.'
+                ],
+                acceptLabel: 'السماح بالكاميرا',
+                onAccept: async () => {
+                    try {
+                        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+                        stream.getTracks().forEach(t => t.stop());
+                        return true;
+                    } catch (e) {
+                        alert('تم رفض إذن الكاميرا. فعّله من إعدادات المتصفح ثم أعد المحاولة.');
+                        return false;
+                    }
+                }
+            },
+            {
+                key: 'storage',
+                icon: 'fa-hard-drive',
+                title: 'إذن التخزين',
+                subtitle: 'الخطوة 2 من 2',
+                desc: 'نحتاج إلى إذن حفظ الملفات لتتمكّن من تصدير التقارير وحفظها على جهازك.',
+                bullets: [
+                    'حفظ تقارير Excel و PDF داخل مجلد التنزيلات.',
+                    'حفظ نسخة احتياطية محلية من بيانات المشاريع.',
+                    'كل الملفات تبقى على جهازك ولا تُشارَك تلقائياً.'
+                ],
+                acceptLabel: 'السماح بالتخزين',
+                onAccept: async () => true
+            }
+        ];
+
+        let idx = 0;
+
+        function render() {
+            const s = steps[idx];
+            overlay.innerHTML = `
+                <div style="background:#1a2230;color:#f3f4f6;max-width:440px;width:100%;border-radius:16px;padding:24px;border:1px solid rgba(255,138,0,0.3);box-shadow:0 20px 60px rgba(0,0,0,.5);">
+                    <div style="display:flex;gap:6px;margin-bottom:16px;">
+                        ${steps.map((_,i)=>`<div style="flex:1;height:4px;border-radius:2px;background:${i<=idx?'#FF8A00':'rgba(255,255,255,0.12)'};"></div>`).join('')}
+                    </div>
+                    <div style="text-align:center;margin-bottom:14px;">
+                        <div style="width:64px;height:64px;margin:0 auto 12px;background:rgba(255,138,0,0.15);border-radius:16px;display:flex;align-items:center;justify-content:center;color:#FF8A00;font-size:28px;">
+                            <i class="fas ${s.icon}"></i>
+                        </div>
+                        <div style="font-size:11px;color:#FF8A00;font-weight:700;letter-spacing:1px;margin-bottom:4px;">${s.subtitle}</div>
+                        <h2 style="font-size:19px;margin:0 0 8px;font-weight:700;">${s.title}</h2>
+                        <p style="font-size:13px;color:#c7ccd3;margin:0;line-height:1.6;">${s.desc}</p>
+                    </div>
+                    <ul style="list-style:none;padding:0;margin:16px 0;display:flex;flex-direction:column;gap:8px;">
+                        ${s.bullets.map(b=>`<li style="display:flex;gap:10px;align-items:flex-start;background:rgba(255,138,0,0.06);padding:10px 12px;border-radius:8px;font-size:12.5px;color:#e5e7eb;line-height:1.55;">
+                            <i class="fas fa-circle-check" style="color:#10b981;font-size:13px;margin-top:3px;"></i>
+                            <span style="flex:1;">${b}</span>
+                        </li>`).join('')}
+                    </ul>
+                    <div style="background:rgba(255,255,255,0.04);padding:10px 12px;border-radius:8px;font-size:11.5px;color:#9ca3af;line-height:1.6;margin-bottom:16px;">
+                        <i class="fas fa-lock" style="color:#10b981;margin-left:4px;"></i>
+                        بياناتك تبقى على جهازك، ولا نشارك أي شيء دون علمك.
+                    </div>
+                    <div style="display:flex;gap:8px;">
+                        <button id="permCancelBtn" style="flex:1;padding:12px;border-radius:10px;border:1px solid #374151;background:transparent;color:#e5e7eb;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit;">إلغاء</button>
+                        <button id="permAcceptBtn" style="flex:2;padding:12px;border-radius:10px;border:none;background:#FF8A00;color:#0F141B;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;">
+                            <i class="fas fa-check"></i> ${s.acceptLabel}
+                        </button>
+                    </div>
+                </div>`;
+            overlay.querySelector('#permCancelBtn').onclick = () => { overlay.remove(); resolve(false); };
+            overlay.querySelector('#permAcceptBtn').onclick = async () => {
+                const btn = overlay.querySelector('#permAcceptBtn');
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جارٍ المعالجة...';
+                const ok = await s.onAccept();
+                if (!ok) { btn.disabled = false; btn.innerHTML = `<i class="fas fa-check"></i> ${s.acceptLabel}`; return; }
+                if (idx < steps.length - 1) { idx++; render(); }
+                else {
+                    localStorage.setItem('spwms_perm_consent_v2', '1');
+                    overlay.remove();
+                    resolve(true);
+                }
+            };
+        }
+        render();
     });
 }
 
