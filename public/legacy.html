@@ -2052,11 +2052,14 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(checkExistingPermissions, 500);
 });
 
-// ===================== SUPABASE CLOUD SYNC =====================
+// ===================== SUPABASE CLOUD SYNC (offline-first) =====================
 (function(){
   const SUPABASE_URL = 'https://ejsxhgnopgeloyqmeinq.supabase.co';
   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqc3hoZ25vcGdlbG95cW1laW5xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMDkyMDcsImV4cCI6MjA5NTg4NTIwN30.ufWanib-pZ1MJfcGfHAdeO6ZzVzBATqClOQm8ry47rw';
   const STORAGE_KEY = 'sb-ejsxhgnopgeloyqmeinq-auth-token';
+  const CACHE_KEY_PROJECTS = 'spwms_cache_projects_v1';
+  const CACHE_KEY_PANELS = 'spwms_cache_panels_v1';
+  const QUEUE_KEY = 'spwms_sync_queue_v1';
   if (!window.supabase || !window.supabase.createClient) { console.warn('Supabase SDK not loaded'); return; }
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
     auth: { storage: window.localStorage, storageKey: STORAGE_KEY, persistSession: true, autoRefreshToken: true }
@@ -2066,64 +2069,160 @@ document.addEventListener('DOMContentLoaded', () => {
   let projIdMap = new Map(); // local id -> db uuid
   let projNameToDbId = new Map();
   let panelDbIdById = new Map(); // local numeric id -> db uuid
+  let queue = loadQueue();
+  let syncing = false;
+  let didInitialFetch = false;
 
-  async function getUser() {
-    const { data } = await sb.auth.getUser();
-    return data.user || null;
+  // ---------- Offline status pill ----------
+  const pill = document.createElement('div');
+  pill.id = 'syncPill';
+  pill.style.cssText = 'position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:99999;background:#0F141B;color:#fff;padding:8px 14px;border-radius:999px;font-size:12px;font-family:Cairo,sans-serif;box-shadow:0 4px 12px rgba(0,0,0,.25);display:none;align-items:center;gap:8px;pointer-events:none';
+  document.body.appendChild(pill);
+  function updatePill() {
+    const online = navigator.onLine;
+    const q = queue.length;
+    if (online && q === 0) { pill.style.display = 'none'; return; }
+    pill.style.display = 'inline-flex';
+    if (!online) {
+      pill.style.background = '#EF4444';
+      pill.innerHTML = '<i class="fa-solid fa-cloud-slash"></i> غير متصل — يتم الحفظ محلياً' + (q ? ' (' + q + ' بانتظار المزامنة)' : '');
+    } else if (syncing) {
+      pill.style.background = '#3B82F6';
+      pill.innerHTML = '<i class="fa-solid fa-arrows-rotate fa-spin"></i> جارٍ مزامنة ' + q + ' عملية...';
+    } else {
+      pill.style.background = '#F59E0B';
+      pill.innerHTML = '<i class="fa-solid fa-clock"></i> ' + q + ' عملية بانتظار المزامنة';
+    }
   }
 
-  async function fetchAll() {
-    const [{ data: projs, error: pe }, { data: pans, error: ne }] = await Promise.all([
-      sb.from('projects').select('*').order('created_at', { ascending: false }),
-      sb.from('panels').select('*').order('created_at', { ascending: false })
-    ]);
-    if (pe) console.error(pe);
-    if (ne) console.error(ne);
-    // map projects
-    projectsList = (projs || []).map(r => {
-      const localId = 'p_' + r.id;
-      projIdMap.set(localId, r.id);
-      projNameToDbId.set(r.name, r.id);
-      return { id: localId, name: r.name, customer: r.customer, date: r.project_date, createdAt: new Date(r.created_at).getTime() };
-    });
-    // map panels (assign numeric ids for display)
-    panels = (pans || []).map((r, i) => {
-      const localId = i + 1;
-      panelDbIdById.set(localId, r.id);
-      return {
-        id: localId,
-        serial: r.serial,
-        model: r.model || 'غير محدد',
-        date: r.install_date || '',
-        time: r.install_time || '',
-        timestamp: new Date(r.created_at).getTime(),
-        customer: r.customer || 'غير محدد',
-        project: r.project_name || 'غير محدد',
-        location: r.location || 'حقل الألواح',
-        warranty: r.warranty_years || '',
-        notes: r.notes || '',
-        status: r.status || 'نشط',
-        __dbId: r.id
-      };
-    });
-    // refresh stored filter lists from DB content
-    const dbProjects = [...new Set(projectsList.map(p => p.name))];
-    const dbCustomers = [...new Set(projectsList.map(p => p.customer).filter(Boolean))];
-    if (dbProjects.length) storedProjects = [...new Set([...storedProjects, ...dbProjects])];
-    if (dbCustomers.length) storedCustomers = [...new Set([...storedCustomers, ...dbCustomers])];
-    saveStoredProjects(); saveStoredCustomers();
-    try { saveProjects(); saveToStorage(); } catch(e){}
+  // ---------- Cache & queue ----------
+  function loadCache(key) { try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch(e){ return null; } }
+  function saveCache(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch(e){} }
+  function persistCache() {
+    saveCache(CACHE_KEY_PROJECTS, projectsList);
+    saveCache(CACHE_KEY_PANELS, panels.map(p => ({...p})));
+    saveCache('spwms_panelDbMap_v1', Array.from(panelDbIdById.entries()));
+    saveCache('spwms_projDbMap_v1', Array.from(projIdMap.entries()));
+    saveCache('spwms_projNameMap_v1', Array.from(projNameToDbId.entries()));
+  }
+  function loadQueue(){ try { return JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]'); } catch(e){ return []; } }
+  function saveQueue(){ try { localStorage.setItem(QUEUE_KEY, JSON.stringify(queue)); } catch(e){} updatePill(); }
+  function enqueue(op){ op.ts = Date.now(); op.tempId = op.tempId || ('tmp_' + Math.random().toString(36).slice(2)); queue.push(op); saveQueue(); return op.tempId; }
+
+  async function getUser() {
+    try { const { data } = await sb.auth.getUser(); return data.user || null; } catch(e){ return null; }
+  }
+
+  function hydrateFromCache() {
+    const cp = loadCache(CACHE_KEY_PROJECTS); const cn = loadCache(CACHE_KEY_PANELS);
+    const pMap = loadCache('spwms_panelDbMap_v1'); const jMap = loadCache('spwms_projDbMap_v1'); const nMap = loadCache('spwms_projNameMap_v1');
+    if (Array.isArray(cp)) projectsList = cp;
+    if (Array.isArray(cn)) panels = cn;
+    if (Array.isArray(pMap)) panelDbIdById = new Map(pMap);
+    if (Array.isArray(jMap)) projIdMap = new Map(jMap);
+    if (Array.isArray(nMap)) projNameToDbId = new Map(nMap);
     renderProjectsScreen();
     if (typeof updateStats === 'function') updateStats();
     if (typeof renderTable === 'function') renderTable();
     if (typeof updateFilters === 'function') updateFilters();
-    if (typeof populateProjectSelect === 'function') populateProjectSelect();
-    if (typeof populateCustomerSelect === 'function') populateCustomerSelect();
   }
 
-  // ===== Wrap mutations =====
-  const _saveProject = window.saveProject;
-  window.saveProject = async function() {
+  async function fetchAll() {
+    if (!navigator.onLine || !userId) return;
+    try {
+      const [{ data: projs, error: pe }, { data: pans, error: ne }] = await Promise.all([
+        sb.from('projects').select('*').order('created_at', { ascending: false }),
+        sb.from('panels').select('*').order('created_at', { ascending: false })
+      ]);
+      if (pe || ne) { console.error(pe||ne); return; }
+      // Preserve any queued (unsynced) items so they stay visible
+      const pendingProjects = projectsList.filter(p => String(p.id).startsWith('tmp_'));
+      const pendingPanels = panels.filter(p => p.__pending);
+      projIdMap = new Map(); projNameToDbId = new Map(); panelDbIdById = new Map();
+      projectsList = (projs || []).map(r => {
+        const localId = 'p_' + r.id;
+        projIdMap.set(localId, r.id);
+        projNameToDbId.set(r.name, r.id);
+        return { id: localId, name: r.name, customer: r.customer, date: r.project_date, createdAt: new Date(r.created_at).getTime() };
+      }).concat(pendingProjects);
+      panels = (pans || []).map((r, i) => {
+        const localId = i + 1;
+        panelDbIdById.set(localId, r.id);
+        return {
+          id: localId, serial: r.serial, model: r.model || 'غير محدد',
+          date: r.install_date || '', time: r.install_time || '',
+          timestamp: new Date(r.created_at).getTime(),
+          customer: r.customer || 'غير محدد', project: r.project_name || 'غير محدد',
+          location: r.location || 'حقل الألواح', warranty: r.warranty_years || '',
+          notes: r.notes || '', status: r.status || 'نشط', __dbId: r.id
+        };
+      });
+      // Re-append pending panels at top with fresh numeric ids
+      let nextId = panels.length ? Math.max(...panels.map(p => p.id)) : 0;
+      pendingPanels.forEach(p => { nextId += 1; p.id = nextId; });
+      panels = pendingPanels.concat(panels);
+      const dbProjects = [...new Set(projectsList.map(p => p.name))];
+      const dbCustomers = [...new Set(projectsList.map(p => p.customer).filter(Boolean))];
+      if (dbProjects.length) storedProjects = [...new Set([...storedProjects, ...dbProjects])];
+      if (dbCustomers.length) storedCustomers = [...new Set([...storedCustomers, ...dbCustomers])];
+      saveStoredProjects(); saveStoredCustomers();
+      persistCache();
+      renderProjectsScreen();
+      if (typeof updateStats === 'function') updateStats();
+      if (typeof renderTable === 'function') renderTable();
+      if (typeof updateFilters === 'function') updateFilters();
+      if (typeof populateProjectSelect === 'function') populateProjectSelect();
+      if (typeof populateCustomerSelect === 'function') populateCustomerSelect();
+      didInitialFetch = true;
+    } catch(e){ console.warn('fetchAll failed (offline?)', e); }
+  }
+
+  // ---------- Queue processing ----------
+  async function flushQueue() {
+    if (syncing || !navigator.onLine || !userId || queue.length === 0) return;
+    syncing = true; updatePill();
+    while (queue.length) {
+      const op = queue[0];
+      try {
+        if (op.type === 'insertProject') {
+          const { data, error } = await sb.from('projects').insert(op.payload).select().single();
+          if (error) throw error;
+          // map temp local id -> real
+          const oldLocal = op.localId; const newLocal = 'p_' + data.id;
+          projIdMap.set(newLocal, data.id);
+          projNameToDbId.set(data.name, data.id);
+          const pj = projectsList.find(p => p.id === oldLocal);
+          if (pj) { pj.id = newLocal; }
+          // panels referencing project by name only; update project_id in pending panel ops
+          queue.forEach(q2 => { if (q2.type === 'insertPanel' && q2.payload && !q2.payload.project_id && q2.payload.project_name === data.name) q2.payload.project_id = data.id; });
+        } else if (op.type === 'insertPanel') {
+          if (!op.payload.project_id && op.payload.project_name) {
+            op.payload.project_id = projNameToDbId.get(op.payload.project_name) || null;
+          }
+          const { data, error } = await sb.from('panels').insert(op.payload).select().single();
+          if (error) throw error;
+          const target = panels.find(p => p.__tempId === op.tempId);
+          if (target) { target.__dbId = data.id; target.__pending = false; panelDbIdById.set(target.id, data.id); delete target.__tempId; }
+        } else if (op.type === 'deletePanel') {
+          if (op.dbId) { const { error } = await sb.from('panels').delete().eq('id', op.dbId); if (error) throw error; }
+        } else if (op.type === 'deleteProject') {
+          if (op.dbId) { const { error } = await sb.from('projects').delete().eq('id', op.dbId); if (error) throw error; }
+        }
+        queue.shift(); saveQueue();
+      } catch(e) {
+        console.error('sync op failed, will retry later', op, e);
+        break; // stop; keep for retry
+      }
+    }
+    syncing = false;
+    persistCache();
+    if (typeof renderTable === 'function') renderTable();
+    renderProjectsScreen();
+    updatePill();
+  }
+
+  // ---------- Wrap mutations (offline-first) ----------
+  window.saveProject = function() {
     const name = (document.getElementById('pmName').value || '').trim();
     const sel = document.getElementById('pmCustomer');
     const customer = sel.value === '__new__' ? (document.getElementById('pmNewCustomerInput').value || '').trim() : sel.value;
@@ -2133,22 +2232,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!date) { showToast('أدخل التاريخ', 'error'); return; }
     if (projectsList.some(p => p.name === name)) { showToast('اسم المشروع موجود مسبقاً', 'error'); return; }
     if (!userId) { showToast('يجب تسجيل الدخول', 'error'); return; }
-    const { data, error } = await sb.from('projects').insert({ user_id: userId, name, customer, project_date: date }).select().single();
-    if (error) { console.error(error); showToast('حدث خطأ أثناء الحفظ. حاول مرة أخرى.', 'error'); return; }
-    const localId = 'p_' + data.id;
-    projIdMap.set(localId, data.id);
-    projNameToDbId.set(name, data.id);
-    projectsList.unshift({ id: localId, name, customer, date, createdAt: Date.now() });
+    const tempId = 'tmp_' + Math.random().toString(36).slice(2);
+    projectsList.unshift({ id: tempId, name, customer, date, createdAt: Date.now() });
     if (!storedCustomers.includes(customer)) { storedCustomers.push(customer); saveStoredCustomers(); populateCustomerSelect(); }
     if (!storedProjects.includes(name)) { storedProjects.push(name); saveStoredProjects(); populateProjectSelect(); }
-    saveProjects();
+    enqueue({ type: 'insertProject', localId: tempId, payload: { user_id: userId, name, customer, project_date: date } });
+    persistCache();
     closeProjectModal();
     renderProjectsScreen();
-    showToast('تم إنشاء المشروع: ' + name, 'success');
+    showToast(navigator.onLine ? 'تم إنشاء المشروع: ' + name : 'تم الحفظ محلياً — ستتم المزامنة عند عودة الاتصال', 'success');
+    flushQueue();
   };
 
-  const _deleteProject = window.deleteProject;
-  window.deleteProject = async function(id) {
+  window.deleteProject = function(id) {
     const p = projectsList.find(x => String(x.id) === String(id));
     if (!p) return;
     const count = projectPanelCount(p.name);
@@ -2156,18 +2252,21 @@ document.addEventListener('DOMContentLoaded', () => {
     if (count) msg += '\n\nيوجد ' + count + ' لوح مرتبط بهذا المشروع، سيتم الاحتفاظ بسجلات الألواح.';
     if (!confirm(msg)) return;
     const dbId = projIdMap.get(id);
-    if (dbId) {
-      const { error } = await sb.from('projects').delete().eq('id', dbId);
-      if (error) { console.error(error); showToast('حدث خطأ أثناء الحذف. حاول مرة أخرى.', 'error'); return; }
+    // If it was queued as insert and never synced, remove that queued op
+    if (String(id).startsWith('tmp_')) {
+      queue = queue.filter(op => !(op.type === 'insertProject' && op.localId === id));
+      saveQueue();
+    } else if (dbId) {
+      enqueue({ type: 'deleteProject', dbId });
     }
     projectsList = projectsList.filter(x => String(x.id) !== String(id));
-    saveProjects();
+    persistCache();
     renderProjectsScreen();
     showToast('تم حذف المشروع', 'warning');
+    flushQueue();
   };
 
-  const _manualScan = window.manualScan;
-  window.manualScan = async function() {
+  window.manualScan = function() {
     const input = document.getElementById('manualSerial');
     const val = cleanSerial(input.value);
     if (!val) { showToast('يرجى إدخال رقم تسلسلي', 'warning'); return; }
@@ -2190,69 +2289,83 @@ document.addEventListener('DOMContentLoaded', () => {
     const projectName = (currentProject && currentProject.name) || 'غير محدد';
     const customer = (currentProject && currentProject.customer) || 'غير محدد';
     const dbProjectId = projNameToDbId.get(projectName) || null;
-    const { data, error } = await sb.from('panels').insert({
-      user_id: userId, project_id: dbProjectId, project_name: projectName, customer,
-      serial: val, model, warranty_years: warranty ? parseInt(warranty,10) : null,
-      install_date: now.toLocaleDateString('ar-SA'),
-      install_time: now.toLocaleTimeString('ar-SA', {hour:'2-digit', minute:'2-digit'}),
-      location, notes, status: 'نشط'
-    }).select().single();
-    if (error) { console.error(error); showToast('حدث خطأ أثناء الحفظ. حاول مرة أخرى.', 'error'); return; }
+    const install_date = now.toLocaleDateString('ar-SA');
+    const install_time = now.toLocaleTimeString('ar-SA', {hour:'2-digit', minute:'2-digit'});
     const newId = panels.length > 0 ? Math.max(...panels.map(p => p.id)) + 1 : 1;
-    panelDbIdById.set(newId, data.id);
+    const tempId = 'tmp_' + Math.random().toString(36).slice(2);
     panels.unshift({
-      id: newId, serial: val, model, date: data.install_date, time: data.install_time,
+      id: newId, serial: val, model, date: install_date, time: install_time,
       timestamp: now.getTime(), customer, project: projectName, location,
-      warranty, notes, status: 'نشط', __dbId: data.id
+      warranty, notes, status: 'نشط', __tempId: tempId, __pending: true
     });
-    saveToStorage(); updateStats(); renderTable(); updateFilters();
+    enqueue({
+      type: 'insertPanel', tempId,
+      payload: {
+        user_id: userId, project_id: dbProjectId, project_name: projectName, customer,
+        serial: val, model, warranty_years: warranty ? parseInt(warranty,10) : null,
+        install_date, install_time, location, notes, status: 'نشط'
+      }
+    });
+    persistCache();
+    updateStats(); renderTable(); updateFilters();
     input.value = ''; input.className = ''; input.focus();
-    showToast('تمت الإضافة: ' + val, 'success');
+    showToast(navigator.onLine ? 'تمت الإضافة: ' + val : 'تم الحفظ محلياً: ' + val, 'success');
     playBeep('success');
     if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
+    flushQueue();
   };
 
-  const _deletePanel = window.deletePanel;
-  window.deletePanel = async function(id) {
+  window.deletePanel = function(id) {
     if (!confirm('حذف هذا السجل؟')) return;
     const panel = panels.find(p => p.id === id);
     const dbId = panel && (panel.__dbId || panelDbIdById.get(id));
-    if (dbId) {
-      const { error } = await sb.from('panels').delete().eq('id', dbId);
-      if (error) { console.error(error); showToast('حدث خطأ أثناء الحذف. حاول مرة أخرى.', 'error'); return; }
+    if (panel && panel.__pending && panel.__tempId) {
+      queue = queue.filter(op => !(op.type === 'insertPanel' && op.tempId === panel.__tempId));
+      saveQueue();
+    } else if (dbId) {
+      enqueue({ type: 'deletePanel', dbId });
     }
     panels = panels.filter(p => p.id !== id);
-    saveToStorage(); updateStats(); renderTable(); updateFilters();
+    persistCache();
+    updateStats(); renderTable(); updateFilters();
     showToast('تم الحذف', 'warning');
+    flushQueue();
   };
 
-  // ===== Init =====
+  // Expose manual sync
+  window.__spwmsSync = flushQueue;
+
+  // ---------- Init ----------
   async function init() {
+    // 1) Show cached data immediately so app works offline
+    hydrateFromCache();
+    updatePill();
+    // 2) Try online path
     const user = await getUser();
-    if (!user) {
-      // No session; the React parent route should have redirected to /auth.
-      return;
-    }
+    if (!user) return;
     userId = user.id;
-    // Clear stale local data from prior localStorage-only mode
-    try {
-      localStorage.removeItem('solarProjects_v1');
-      localStorage.removeItem('solarWarrantyPanels_v2');
-    } catch(e){}
-    projectsList = [];
-    panels = [];
     await fetchAll();
+    await flushQueue();
+    updatePill();
   }
-  // Wait for DOMContentLoaded init to finish, then sync from DB
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => setTimeout(init, 100));
-  } else {
-    setTimeout(init, 100);
-  }
-  // Re-sync on auth change
+  } else { setTimeout(init, 100); }
+
+  // Online/offline listeners → auto-sync
+  window.addEventListener('online', async () => {
+    updatePill();
+    if (!userId) { const u = await getUser(); if (u) userId = u.id; }
+    await flushQueue();
+    if (!didInitialFetch) await fetchAll();
+  });
+  window.addEventListener('offline', updatePill);
+  // Periodic retry every 30s while queue non-empty
+  setInterval(() => { if (queue.length && navigator.onLine) flushQueue(); }, 30000);
+
   sb.auth.onAuthStateChange((_e, session) => {
-    if (session && session.user) { userId = session.user.id; fetchAll(); }
-    else { userId = null; projectsList = []; panels = []; renderProjectsScreen(); renderTable && renderTable(); }
+    if (session && session.user) { userId = session.user.id; fetchAll().then(flushQueue); }
+    else { userId = null; }
   });
 })();
 </script>
