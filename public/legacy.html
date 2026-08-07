@@ -687,8 +687,46 @@ s="header">
     </div>
     <div class="footer-right">
         <button class="btn btn-secondary btn-sm" onclick="backupData()"><i class="fas fa-file-code"></i> JSON</button>
-        <button class="btn btn-blue btn-sm" onclick="exportExcel()"><i class="fas fa-file-excel"></i> Excel</button>
-        <button class="btn btn-primary btn-sm" onclick="exportPDF()"><i class="fas fa-file-pdf"></i> PDF</button>
+        <button class="btn btn-blue btn-sm" onclick="openReportDialog('excel')"><i class="fas fa-file-excel"></i> Excel</button>
+        <button class="btn btn-primary btn-sm" onclick="openReportDialog('pdf')"><i class="fas fa-file-pdf"></i> PDF</button>
+    </div>
+</div>
+
+<div id="reportModal" class="modal-overlay" onclick="if(event.target===this)closeReportDialog()">
+    <div class="modal" style="max-width:520px">
+        <div class="modal-header">
+            <h3><i class="fas fa-sliders-h"></i> خيارات التقرير (<span id="reportTargetLabel">PDF</span>)</h3>
+            <button type="button" class="modal-close" onclick="closeReportDialog()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="reportTarget" value="pdf">
+            <div class="form-group">
+                <label>نوع التقرير (القالب)</label>
+                <select id="reportType"></select>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <div class="form-group"><label>من تاريخ</label><input type="date" id="reportFrom"></div>
+                <div class="form-group"><label>إلى تاريخ</label><input type="date" id="reportTo"></div>
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="setReportRange(7)">آخر 7 أيام</button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="setReportRange(30)">آخر 30 يوماً</button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="setReportRange(90)">آخر 90 يوماً</button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="setReportRange(0)">كل الفترات</button>
+            </div>
+            <div class="form-group"><label>اسم الشركة</label><input type="text" id="reportCompany" placeholder="اسم الشركة"></div>
+            <div class="form-group"><label>اسم الشركة (إنجليزي)</label><input type="text" id="reportCompanyEn" placeholder="Company Name"></div>
+            <div class="form-group"><label>فترة الضمان</label><input type="text" id="reportWarranty" placeholder="25 سنة للأداء / 12 سنة للمنتج"></div>
+            <div style="display:flex;flex-direction:column;gap:8px;font-size:13px">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="reportSummary" checked> تضمين قسم الملخص</label>
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="reportSignatures" checked> تضمين التوقيعات والختم</label>
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="reportUseFilters" checked> تطبيق فلاتر الجدول الحالية</label>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeReportDialog()">إلغاء</button>
+            <button type="button" class="btn btn-primary" onclick="runReportExport()"><i class="fas fa-download"></i> تصدير</button>
+        </div>
     </div>
 </div>
 
@@ -1552,7 +1590,7 @@ function updateStats() {
     document.getElementById('statActive').textContent = panels.filter(p => p.status === 'نشط').length;
 }
 
-// ===================== EXPORT (Premium Warranty Report) =====================
+// ===================== EXPORT (Customizable Report Templates) =====================
 const REPORT_DEFAULTS = {
     companyName: 'شركة الطاقة الشمسية المتقدمة',
     companyNameEn: 'Advanced Solar Energy Co.',
@@ -1561,101 +1599,269 @@ const REPORT_DEFAULTS = {
     brandDark: '0F141B'
 };
 
-function _getReportMeta() {
-    let cfg = {};
-    try { cfg = JSON.parse(localStorage.getItem('reportCompanyCfg_v1') || '{}'); } catch(e) {}
-    const companyName = cfg.companyName || REPORT_DEFAULTS.companyName;
-    const companyNameEn = cfg.companyNameEn || REPORT_DEFAULTS.companyNameEn;
-    const warrantyPeriod = cfg.warrantyPeriod || REPORT_DEFAULTS.warrantyPeriod;
+// ---------- Templates ----------
+const REPORT_TEMPLATES = {
+    warranty: {
+        label: 'تقرير ضمان رسمي',
+        titleAr: 'تقرير ضمان الألواح الشمسية',
+        titleEn: 'SOLAR PANEL WARRANTY REPORT',
+        columns: [
+            { key:'#',        label:'#',                 wch:6,  align:'center' },
+            { key:'serial',   label:'الرقم التسلسلي',    wch:26, align:'center', mono:true },
+            { key:'warranty', label:'المجموعة (String)', wch:18, align:'center' },
+            { key:'model',    label:'الموديل',           wch:24, align:'center' },
+            { key:'notes',    label:'ملاحظات',           wch:40, align:'right'  }
+        ],
+        summary: true, signatures: true, table: true
+    },
+    inventory: {
+        label: 'تقرير جرد الألواح',
+        titleAr: 'تقرير جرد الألواح المركبة',
+        titleEn: 'INSTALLED PANELS INVENTORY REPORT',
+        columns: [
+            { key:'#',        label:'#',                 wch:6,  align:'center' },
+            { key:'serial',   label:'الرقم التسلسلي',    wch:26, align:'center', mono:true },
+            { key:'model',    label:'الموديل',           wch:22, align:'center' },
+            { key:'warranty', label:'المجموعة (String)', wch:16, align:'center' },
+            { key:'location', label:'الموقع',            wch:20, align:'center' },
+            { key:'date',     label:'تاريخ التركيب',     wch:18, align:'center' }
+        ],
+        summary: true, signatures: false, table: true
+    },
+    serials: {
+        label: 'قائمة الأرقام التسلسلية',
+        titleAr: 'قائمة الأرقام التسلسلية',
+        titleEn: 'SERIAL NUMBERS LIST',
+        columns: [
+            { key:'#',      label:'#',              wch:6,  align:'center' },
+            { key:'serial', label:'الرقم التسلسلي', wch:32, align:'center', mono:true }
+        ],
+        summary: false, signatures: false, table: true
+    },
+    summary: {
+        label: 'ملخص تنفيذي (حسب المجموعات)',
+        titleAr: 'ملخص تنفيذي للتركيب',
+        titleEn: 'EXECUTIVE INSTALLATION SUMMARY',
+        columns: [
+            { key:'group', label:'المجموعة (String)', wch:22, align:'center' },
+            { key:'count', label:'عدد الألواح',       wch:16, align:'center' },
+            { key:'models', label:'الموديلات',        wch:38, align:'right'  }
+        ],
+        summary: true, signatures: true, table: true, grouped: true
+    }
+};
 
-    // Resolve a single "report scope" customer/project/location/installDate.
-    // Prefer the active filter, else fall back to the most frequent value in the dataset.
-    const mostCommon = (key) => {
+// ---------- Saved options ----------
+function getReportOptions() {
+    let o = {};
+    try { o = JSON.parse(localStorage.getItem('reportOptions_v1') || '{}'); } catch(e) {}
+    return {
+        type: REPORT_TEMPLATES[o.type] ? o.type : 'warranty',
+        from: o.from || '',
+        to: o.to || '',
+        companyName: o.companyName || REPORT_DEFAULTS.companyName,
+        companyNameEn: o.companyNameEn || REPORT_DEFAULTS.companyNameEn,
+        warrantyPeriod: o.warrantyPeriod || REPORT_DEFAULTS.warrantyPeriod,
+        summary: o.summary !== false,
+        signatures: o.signatures !== false,
+        useFilters: o.useFilters !== false
+    };
+}
+function saveReportOptions(o) {
+    try { localStorage.setItem('reportOptions_v1', JSON.stringify(o)); } catch(e) {}
+}
+
+function openReportDialog(target) {
+    const o = getReportOptions();
+    const modal = document.getElementById('reportModal');
+    document.getElementById('reportTarget').value = target;
+    const sel = document.getElementById('reportType');
+    sel.innerHTML = Object.keys(REPORT_TEMPLATES).map(k =>
+        '<option value="' + k + '">' + REPORT_TEMPLATES[k].label + '</option>').join('');
+    sel.value = o.type;
+    document.getElementById('reportFrom').value = o.from;
+    document.getElementById('reportTo').value = o.to;
+    document.getElementById('reportCompany').value = o.companyName;
+    document.getElementById('reportCompanyEn').value = o.companyNameEn;
+    document.getElementById('reportWarranty').value = o.warrantyPeriod;
+    document.getElementById('reportSummary').checked = o.summary;
+    document.getElementById('reportSignatures').checked = o.signatures;
+    document.getElementById('reportUseFilters').checked = o.useFilters;
+    document.getElementById('reportTargetLabel').textContent = target === 'excel' ? 'Excel' : 'PDF';
+    modal.classList.add('show');
+}
+function closeReportDialog() {
+    document.getElementById('reportModal').classList.remove('show');
+}
+function setReportRange(days) {
+    const to = new Date();
+    const from = new Date(to.getTime() - (days - 1) * 86400000);
+    document.getElementById('reportFrom').value = days ? from.toISOString().slice(0,10) : '';
+    document.getElementById('reportTo').value = days ? to.toISOString().slice(0,10) : '';
+}
+function runReportExport() {
+    const opts = {
+        type: document.getElementById('reportType').value,
+        from: document.getElementById('reportFrom').value,
+        to: document.getElementById('reportTo').value,
+        companyName: (document.getElementById('reportCompany').value || '').trim() || REPORT_DEFAULTS.companyName,
+        companyNameEn: (document.getElementById('reportCompanyEn').value || '').trim() || REPORT_DEFAULTS.companyNameEn,
+        warrantyPeriod: (document.getElementById('reportWarranty').value || '').trim() || REPORT_DEFAULTS.warrantyPeriod,
+        summary: document.getElementById('reportSummary').checked,
+        signatures: document.getElementById('reportSignatures').checked,
+        useFilters: document.getElementById('reportUseFilters').checked
+    };
+    saveReportOptions(opts);
+    const target = document.getElementById('reportTarget').value;
+    closeReportDialog();
+    if (target === 'excel') exportExcel(opts); else exportPDF(opts);
+}
+
+function _inRange(p, from, to) {
+    if (!from && !to) return true;
+    const ts = Number(p.timestamp);
+    if (!ts) return true;
+    if (from && ts < new Date(from + 'T00:00:00').getTime()) return false;
+    if (to && ts > new Date(to + 'T23:59:59').getTime()) return false;
+    return true;
+}
+
+function _getReportMeta(opts) {
+    const o = Object.assign(getReportOptions(), opts || {});
+    const tpl = REPORT_TEMPLATES[o.type] || REPORT_TEMPLATES.warranty;
+
+    const mostCommon = (key, list) => {
         const counts = new Map();
-        panels.forEach(p => { const v = (p[key]||'').trim(); if (v) counts.set(v,(counts.get(v)||0)+1); });
+        list.forEach(p => { const v = (p[key]||'').trim(); if (v) counts.set(v,(counts.get(v)||0)+1); });
         let best = '', n = 0;
         counts.forEach((c,v) => { if (c>n){ n=c; best=v; }});
         return best;
     };
-    const fEl = (id) => { const el = document.getElementById(id); return el ? el.value : ''; };
-    const customer = fEl('filterCustomer') || mostCommon('customer') || '—';
-    const project  = fEl('filterProject')  || mostCommon('project')  || '—';
-    const location = fEl('filterLocation') || mostCommon('location') || '—';
-    const installDate = fEl('filterDate')  || mostCommon('date')     || new Date().toLocaleDateString('ar-SA');
+    const fEl = (id) => { if (!o.useFilters) return ''; const el = document.getElementById(id); return el ? el.value : ''; };
 
-    // Per-customer phone book stored locally
-    let phones = {};
-    try { phones = JSON.parse(localStorage.getItem('solarWarrantyPhones_v1') || '{}'); } catch(e) {}
-    let phone = phones[customer] || '';
-    if (!phone && customer && customer !== '—') {
-        phone = (prompt('رقم هاتف العميل "' + customer + '" (يحفظ تلقائياً)', '') || '').trim();
-        if (phone) { phones[customer] = phone; try { localStorage.setItem('solarWarrantyPhones_v1', JSON.stringify(phones)); } catch(e) {} }
-    }
-    if (!phone) phone = '—';
-
-    // Scope rows to selected customer/project so the report is coherent
+    // Scope rows to active filters + selected date range
     const scoped = panels.filter(p =>
         (!fEl('filterCustomer') || p.customer === fEl('filterCustomer')) &&
         (!fEl('filterProject')  || p.project  === fEl('filterProject'))  &&
         (!fEl('filterLocation') || p.location === fEl('filterLocation')) &&
-        (!fEl('filterDate')     || p.date     === fEl('filterDate'))
+        (!fEl('filterDate')     || p.date     === fEl('filterDate'))     &&
+        _inRange(p, o.from, o.to)
     );
-    const rows = scoped.length ? scoped : panels;
+    const rows = scoped;
+    const customer = fEl('filterCustomer') || mostCommon('customer', rows) || '—';
+    const project  = fEl('filterProject')  || mostCommon('project', rows)  || '—';
+    const location = fEl('filterLocation') || mostCommon('location', rows) || '—';
+    const installDate = fEl('filterDate')  || mostCommon('date', rows)     || new Date().toLocaleDateString('ar-SA');
+
+    let phones = {};
+    try { phones = JSON.parse(localStorage.getItem('solarWarrantyPhones_v1') || '{}'); } catch(e) {}
+    let phone = phones[customer] || '—';
+
     const strings = new Set(rows.map(p => (p.warranty||'').trim()).filter(Boolean));
 
+    // Grouped body for the executive summary template
+    let body;
+    if (tpl.grouped) {
+        const groups = new Map();
+        rows.forEach(p => {
+            const g = (p.warranty||'').trim() || 'غير محدد';
+            if (!groups.has(g)) groups.set(g, { count:0, models:new Set() });
+            const e = groups.get(g); e.count++; if (p.model) e.models.add(p.model);
+        });
+        body = [...groups.entries()].sort((a,b) => a[0].localeCompare(b[0], 'ar'))
+            .map(([g,e]) => ({ group:g, count:e.count, models:[...e.models].join(' · ') }));
+    } else {
+        body = rows.map((p,i) => Object.assign({}, p, { '#': i+1 }));
+    }
+
+    const rangeLabel = (o.from || o.to)
+        ? (o.from || '…') + '  ←  ' + (o.to || '…')
+        : 'كل الفترات';
+
     return {
-        companyName, companyNameEn, warrantyPeriod,
-        customer, phone, project, location, installDate,
+        opts: o, tpl,
+        companyName: o.companyName, companyNameEn: o.companyNameEn, warrantyPeriod: o.warrantyPeriod,
+        customer, phone, project, location, installDate, rangeLabel,
         reportDate: new Date().toLocaleDateString('ar-SA'),
-        rows, totalPanels: rows.length, totalStrings: strings.size
+        rows, body, totalPanels: rows.length, totalStrings: strings.size,
+        totalModels: new Set(rows.map(p => (p.model||'').trim()).filter(Boolean)).size
     };
 }
 
+function _summaryPairs(m) {
+    const pairs = [
+        ['إجمالي الألواح', m.totalPanels],
+        ['عدد المجموعات (Strings)', m.totalStrings],
+        ['عدد الموديلات', m.totalModels]
+    ];
+    if (m.tpl.signatures) pairs.push(['فترة الضمان', m.warrantyPeriod]);
+    pairs.push(['نطاق التاريخ', m.rangeLabel]);
+    return pairs;
+}
+
 // ---------- EXCEL ----------
-function exportExcel() {
+function exportExcel(optsArg) {
     if (!panels.length) { showToast('لا توجد بيانات', 'warning'); return; }
-    const m = _getReportMeta();
-    if (!m.rows.length) { showToast('لا توجد بيانات للنطاق المحدد', 'warning'); return; }
+    const m = _getReportMeta(optsArg);
+    if (!m.body.length) { showToast('لا توجد بيانات للنطاق المحدد', 'warning'); return; }
 
-    const headers = ['#','الرقم التسلسلي','المجموعة (String)','الموديل','ملاحظات'];
-    const dataRows = m.rows.map((p,i) => [i+1, p.serial||'', p.warranty||'-', p.model||'', p.notes||'']);
+    const cols = m.tpl.columns;
+    const nc = cols.length;
+    const pad = (arr) => { const a = arr.slice(); while (a.length < nc) a.push(''); return a; };
+    const headers = cols.map(c => c.label);
+    const dataRows = m.body.map(r => cols.map(c => {
+        const v = r[c.key];
+        return v == null || v === '' ? (c.key === 'notes' ? '' : '-') : v;
+    }));
 
-    // AOA: 0 title, 1 subtitle, 2 blank, 3-5 info grid (2 rows), 6 blank, 7 headers, 8.. data, then totals + summary
     const aoa = [
-        [m.companyName, '', '', '', ''],                                                   // r0
-        ['Solar Panel Warranty Report  ·  تقرير ضمان الألواح الشمسية', '', '', '', ''],    // r1
-        [],                                                                                 // r2
-        ['العميل', m.customer, 'الهاتف', m.phone, ''],                                     // r3
-        ['المشروع', m.project, 'الموقع', m.location, ''],                                  // r4
-        ['تاريخ التركيب', m.installDate, 'تاريخ التقرير', m.reportDate, ''],               // r5
-        [],                                                                                 // r6
-        headers,                                                                            // r7
+        pad([m.companyName]),
+        pad([m.tpl.titleEn + '  ·  ' + m.tpl.titleAr]),
+        [],
+        pad(['العميل', m.customer, 'الهاتف', m.phone]),
+        pad(['المشروع', m.project, 'الموقع', m.location]),
+        pad(['نطاق التاريخ', m.rangeLabel, 'تاريخ التقرير', m.reportDate]),
+        [],
+        headers,
         ...dataRows
     ];
     const totalsRowIdx = aoa.length;
-    aoa.push(['', '', '', 'الإجمالي', m.totalPanels]);
-    const sumStart = aoa.length;
-    aoa.push([]);
-    aoa.push(['ملخص التقرير', '', '', '', '']);
-    aoa.push(['إجمالي الألواح', m.totalPanels, 'عدد المجموعات (Strings)', m.totalStrings, '']);
-    aoa.push(['فترة الضمان', m.warrantyPeriod, '', '', '']);
-    aoa.push([]);
-    const sigRow = aoa.length;
-    aoa.push(['توقيع الفني', '', 'توقيع العميل', '', 'ختم الشركة']);
-    aoa.push(['_______________________', '', '_______________________', '', '_______________________']);
+    const totalsRow = new Array(nc).fill('');
+    totalsRow[0] = 'الإجمالي';
+    totalsRow[nc-1] = m.tpl.grouped ? m.totalPanels : m.body.length;
+    aoa.push(totalsRow);
+
+    let sumStart = -1, sumRows = [];
+    if (m.tpl.summary && m.opts.summary) {
+        aoa.push([]);
+        sumStart = aoa.length;
+        aoa.push(pad(['ملخص التقرير']));
+        const pairs = _summaryPairs(m);
+        for (let i=0;i<pairs.length;i+=2) {
+            const row = pad([pairs[i][0], pairs[i][1], (pairs[i+1]||['',''])[0], (pairs[i+1]||['',''])[1]]);
+            aoa.push(row); sumRows.push(aoa.length-1);
+        }
+    }
+    let sigRow = -1;
+    if (m.tpl.signatures && m.opts.signatures) {
+        aoa.push([]);
+        sigRow = aoa.length;
+        aoa.push(pad(['توقيع الفني', '', 'توقيع العميل', '', 'ختم الشركة']));
+        aoa.push(pad(['_______________________', '', '_______________________', '', '_______________________']));
+    }
 
     const ws = XLSX.utils.aoa_to_sheet(aoa);
-    ws['!cols'] = [{wch:6},{wch:26},{wch:18},{wch:24},{wch:40}];
+    ws['!cols'] = cols.map(c => ({ wch: c.wch || 18 }));
     ws['!rows'] = [{hpt:34},{hpt:22},{},{hpt:22},{hpt:22},{hpt:22},{},{hpt:26}];
     ws['!merges'] = [
-        {s:{r:0,c:0},e:{r:0,c:4}},
-        {s:{r:1,c:0},e:{r:1,c:4}},
-        {s:{r:sumStart+1,c:0},e:{r:sumStart+1,c:4}},
-        {s:{r:totalsRowIdx,c:0},e:{r:totalsRowIdx,c:3}}
+        {s:{r:0,c:0},e:{r:0,c:nc-1}},
+        {s:{r:1,c:0},e:{r:1,c:nc-1}},
+        {s:{r:totalsRowIdx,c:0},e:{r:totalsRowIdx,c:Math.max(0,nc-2)}}
     ];
+    if (sumStart > -1) ws['!merges'].push({s:{r:sumStart,c:0},e:{r:sumStart,c:nc-1}});
     ws['!views'] = [{RTL:true}];
     ws['!freeze'] = { xSplit: 0, ySplit: 8 };
-    ws['!autofilter'] = { ref: `A8:E8` };
+    ws['!autofilter'] = { ref: 'A8:' + XLSX.utils.encode_col(nc-1) + '8' };
 
     const F = 'Cairo';
     const border = { top:{style:'thin',color:{rgb:'D1D5DB'}}, bottom:{style:'thin',color:{rgb:'D1D5DB'}}, left:{style:'thin',color:{rgb:'D1D5DB'}}, right:{style:'thin',color:{rgb:'D1D5DB'}} };
@@ -1667,69 +1873,66 @@ function exportExcel() {
     const infoLabel = { font:{name:F,bold:true,sz:11,color:{rgb:'374151'}}, fill:{fgColor:{rgb:'F3F4F6'}}, alignment:{horizontal:'right',vertical:'center',indent:1}, border };
     const infoValue = { font:{name:F,sz:11,color:{rgb:'111827'}}, fill:{fgColor:{rgb:'FFFFFF'}}, alignment:{horizontal:'right',vertical:'center',indent:1}, border };
     [3,4,5].forEach(r => {
-        setStyle(XLSX.utils.encode_cell({r,c:0}), infoLabel);
-        setStyle(XLSX.utils.encode_cell({r,c:1}), infoValue);
-        setStyle(XLSX.utils.encode_cell({r,c:2}), infoLabel);
-        setStyle(XLSX.utils.encode_cell({r,c:3}), infoValue);
+        [0,2].forEach(c => { if (c < nc) setStyle(XLSX.utils.encode_cell({r,c}), infoLabel); });
+        [1,3].forEach(c => { if (c < nc) setStyle(XLSX.utils.encode_cell({r,c}), infoValue); });
     });
 
     const head = { font:{name:F,bold:true,sz:11,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:REPORT_DEFAULTS.brandDark}}, alignment:{horizontal:'center',vertical:'center',wrapText:true}, border };
-    for (let c=0;c<headers.length;c++) setStyle(XLSX.utils.encode_cell({r:7,c}), head);
+    for (let c=0;c<nc;c++) setStyle(XLSX.utils.encode_cell({r:7,c}), head);
 
     for (let r=0;r<dataRows.length;r++) {
         const rowIdx = 8 + r;
         const zebra = r % 2 === 0 ? 'FFFFFF' : 'F9FAFB';
-        for (let c=0;c<headers.length;c++) {
-            const a = XLSX.utils.encode_cell({r:rowIdx,c});
-            setStyle(a, {
-                font:{name:F, sz:10, bold: c===1, color:{rgb:'1F2937'}},
+        for (let c=0;c<nc;c++) {
+            setStyle(XLSX.utils.encode_cell({r:rowIdx,c}), {
+                font:{name:F, sz:10, bold: !!cols[c].mono, color:{rgb:'1F2937'}},
                 fill:{fgColor:{rgb:zebra}},
-                alignment:{horizontal: c===4 ? 'right' : 'center', vertical:'center', wrapText: c===4},
+                alignment:{horizontal: cols[c].align || 'center', vertical:'center', wrapText: cols[c].align === 'right'},
                 border
             });
         }
     }
 
-    // totals row
-    const totLabel = { font:{name:F,bold:true,sz:11,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:REPORT_DEFAULTS.brandPrimary}}, alignment:{horizontal:'left',vertical:'center',indent:1}, border };
+    const totLabel = { font:{name:F,bold:true,sz:11,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:REPORT_DEFAULTS.brandPrimary}}, alignment:{horizontal:'right',vertical:'center',indent:1}, border };
     const totVal   = { font:{name:F,bold:true,sz:12,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:REPORT_DEFAULTS.brandPrimary}}, alignment:{horizontal:'center',vertical:'center'}, border };
-    for (let c=0;c<4;c++) setStyle(XLSX.utils.encode_cell({r:totalsRowIdx,c}), totLabel);
-    setStyle(XLSX.utils.encode_cell({r:totalsRowIdx,c:4}), totVal);
+    for (let c=0;c<nc-1;c++) setStyle(XLSX.utils.encode_cell({r:totalsRowIdx,c}), totLabel);
+    setStyle(XLSX.utils.encode_cell({r:totalsRowIdx,c:nc-1}), totVal);
 
-    // summary block
-    setStyle(XLSX.utils.encode_cell({r:sumStart+1,c:0}), { font:{name:F,bold:true,sz:13,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:REPORT_DEFAULTS.brandDark}}, alignment:{horizontal:'center',vertical:'center'} });
-    const sumLabel = { font:{name:F,bold:true,sz:11,color:{rgb:'374151'}}, fill:{fgColor:{rgb:'FEF3C7'}}, alignment:{horizontal:'right',vertical:'center',indent:1}, border };
-    const sumVal   = { font:{name:F,bold:true,sz:12,color:{rgb:'F97316'}}, fill:{fgColor:{rgb:'FFFBEB'}}, alignment:{horizontal:'center',vertical:'center'}, border };
-    [sumStart+2, sumStart+3].forEach(r => {
-        [0,2].forEach(c => setStyle(XLSX.utils.encode_cell({r,c}), sumLabel));
-        [1,3].forEach(c => setStyle(XLSX.utils.encode_cell({r,c}), sumVal));
-    });
+    if (sumStart > -1) {
+        setStyle(XLSX.utils.encode_cell({r:sumStart,c:0}), { font:{name:F,bold:true,sz:13,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:REPORT_DEFAULTS.brandDark}}, alignment:{horizontal:'center',vertical:'center'} });
+        const sumLabel = { font:{name:F,bold:true,sz:11,color:{rgb:'374151'}}, fill:{fgColor:{rgb:'FEF3C7'}}, alignment:{horizontal:'right',vertical:'center',indent:1}, border };
+        const sumVal   = { font:{name:F,bold:true,sz:12,color:{rgb:'F97316'}}, fill:{fgColor:{rgb:'FFFBEB'}}, alignment:{horizontal:'center',vertical:'center'}, border };
+        sumRows.forEach(r => {
+            [0,2].forEach(c => { if (c < nc) setStyle(XLSX.utils.encode_cell({r,c}), sumLabel); });
+            [1,3].forEach(c => { if (c < nc) setStyle(XLSX.utils.encode_cell({r,c}), sumVal); });
+        });
+    }
 
-    // signatures
-    const sigHead = { font:{name:F,bold:true,sz:11,color:{rgb:'111827'}}, alignment:{horizontal:'center',vertical:'center'} };
-    const sigLine = { font:{name:F,sz:11,color:{rgb:'6B7280'}}, alignment:{horizontal:'center',vertical:'center'} };
-    [0,2,4].forEach(c => { setStyle(XLSX.utils.encode_cell({r:sigRow,c}), sigHead); setStyle(XLSX.utils.encode_cell({r:sigRow+1,c}), sigLine); });
+    if (sigRow > -1) {
+        const sigHead = { font:{name:F,bold:true,sz:11,color:{rgb:'111827'}}, alignment:{horizontal:'center',vertical:'center'} };
+        const sigLine = { font:{name:F,sz:11,color:{rgb:'6B7280'}}, alignment:{horizontal:'center',vertical:'center'} };
+        [0,2,4].forEach(c => { if (c < nc) { setStyle(XLSX.utils.encode_cell({r:sigRow,c}), sigHead); setStyle(XLSX.utils.encode_cell({r:sigRow+1,c}), sigLine); } });
+    }
 
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'تقرير الضمان');
+    XLSX.utils.book_append_sheet(wb, ws, 'التقرير');
     wb.Workbook = wb.Workbook || {}; wb.Workbook.Views = [{ RTL: true }];
-    XLSX.writeFile(wb, `تقرير-ضمان-${m.project||'تقرير'}-${new Date().toISOString().slice(0,10)}.xlsx`);
-    showToast('تم تصدير Excel بتصميم احترافي', 'success');
+    XLSX.writeFile(wb, `${m.tpl.label}-${m.project||'تقرير'}-${new Date().toISOString().slice(0,10)}.xlsx`);
+    showToast('تم تصدير Excel: ' + m.tpl.label, 'success');
 }
 
 // ---------- PDF ----------
-function _buildPdfHTML() {
-    const m = _getReportMeta();
+function _buildPdfHTML(optsArg) {
+    const m = _getReportMeta(optsArg);
     const esc = (v) => escapeHtml(v == null ? '' : String(v));
-    const rowsHtml = m.rows.map((p,i) => `
-        <tr>
-            <td style="width:42px">${i+1}</td>
-            <td style="font-family:'Courier New',monospace;font-weight:700">${esc(p.serial)}</td>
-            <td style="font-weight:700;color:#0F141B">${esc(p.warranty)||'-'}</td>
-            <td>${esc(p.model)}</td>
-            <td style="text-align:right">${esc(p.notes)||'—'}</td>
-        </tr>
-    `).join('');
+    const cols = m.tpl.columns;
+
+    const rowsHtml = m.body.map(r => '<tr>' + cols.map(c => {
+        const v = r[c.key];
+        const style = 'text-align:' + (c.align === 'right' ? 'right' : 'center')
+            + (c.mono ? ";font-family:'Courier New',monospace;font-weight:700" : '');
+        return `<td style="${style}">${esc(v === '' || v == null ? '—' : v)}</td>`;
+    }).join('') + '</tr>').join('');
 
     const infoCell = (label, value) => `
         <div style="display:flex;border:1px solid #E5E7EB;border-radius:8px;overflow:hidden;background:#fff">
@@ -1737,9 +1940,31 @@ function _buildPdfHTML() {
             <div style="padding:8px 12px;color:#111827;font-size:11.5px;flex:1;text-align:right">${esc(value)||'—'}</div>
         </div>`;
 
+    const summaryHtml = (m.tpl.summary && m.opts.summary) ? `
+      <div style="padding:18px 28px 0">
+        <div style="font-size:13px;font-weight:800;color:#0F141B;margin-bottom:8px;border-right:4px solid #FF8A00;padding-right:10px">ملخص التقرير</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+          ${_summaryPairs(m).map(([l,v]) => `
+            <div style="border:1px solid #E5E7EB;border-top:4px solid #FF8A00;border-radius:10px;padding:12px 14px;background:#fff">
+              <div style="font-size:10.5px;color:#6B7280;font-weight:700">${esc(l)}</div>
+              <div style="font-size:16px;font-weight:800;color:#0F141B;margin-top:4px">${esc(v)}</div>
+            </div>`).join('')}
+        </div>
+      </div>` : '';
+
+    const signaturesHtml = (m.tpl.signatures && m.opts.signatures) ? `
+      <div style="padding:24px 28px 18px">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px">
+          ${['توقيع الفني','توقيع العميل','ختم الشركة'].map(l => `
+            <div style="text-align:center">
+              <div style="height:54px;border-bottom:1.5px dashed #9CA3AF;margin-bottom:6px"></div>
+              <div style="font-size:11px;font-weight:700;color:#374151">${l}</div>
+            </div>`).join('')}
+        </div>
+      </div>` : '<div style="height:18px"></div>';
+
     return `
     <div id="pdfReport" style="width:794px;background:#fff;color:#111827;font-family:'Cairo',sans-serif;direction:rtl">
-      <!-- HEADER -->
       <div style="background:linear-gradient(135deg,#FF8A00,#E5730A);color:#fff;padding:18px 28px;display:flex;justify-content:space-between;align-items:center">
         <div style="display:flex;align-items:center;gap:14px">
           <div style="width:58px;height:58px;border-radius:14px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;border:2px solid rgba(255,255,255,.35)">
@@ -1751,78 +1976,48 @@ function _buildPdfHTML() {
           </div>
         </div>
         <div style="text-align:left">
-          <div style="font-size:10px;opacity:.9;letter-spacing:1.5px">SOLAR PANEL WARRANTY REPORT</div>
-          <div style="font-size:17px;font-weight:800;margin-top:2px">تقرير ضمان الألواح الشمسية</div>
+          <div style="font-size:10px;opacity:.9;letter-spacing:1.5px">${esc(m.tpl.titleEn)}</div>
+          <div style="font-size:17px;font-weight:800;margin-top:2px">${esc(m.tpl.titleAr)}</div>
         </div>
       </div>
       <div style="height:4px;background:#0F141B"></div>
 
-      <!-- INFO GRID -->
       <div style="padding:18px 28px 6px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
         ${infoCell('العميل', m.customer)}
         ${infoCell('رقم الهاتف', m.phone)}
         ${infoCell('المشروع', m.project)}
         ${infoCell('الموقع', m.location)}
-        ${infoCell('تاريخ التركيب', m.installDate)}
+        ${infoCell('نطاق التاريخ', m.rangeLabel)}
         ${infoCell('تاريخ التقرير', m.reportDate)}
       </div>
 
-      <!-- TABLE -->
       <div style="padding:14px 28px 0">
-        <div style="font-size:13px;font-weight:800;color:#0F141B;margin:8px 0 8px;border-right:4px solid #FF8A00;padding-right:10px">تفاصيل الألواح المسجلة</div>
+        <div style="font-size:13px;font-weight:800;color:#0F141B;margin:8px 0 8px;border-right:4px solid #FF8A00;padding-right:10px">${esc(m.tpl.grouped ? 'توزيع الألواح على المجموعات' : 'تفاصيل الألواح المسجلة')}</div>
         <table style="width:100%;border-collapse:collapse;font-size:11px;border:1px solid #E5E7EB">
           <thead>
             <tr style="background:#0F141B;color:#fff">
-              <th style="padding:9px 6px;text-align:center;width:42px">#</th>
-              <th style="padding:9px 6px;text-align:center">الرقم التسلسلي</th>
-              <th style="padding:9px 6px;text-align:center;width:90px">المجموعة (String)</th>
-              <th style="padding:9px 6px;text-align:center">الموديل</th>
-              <th style="padding:9px 6px;text-align:center">ملاحظات</th>
+              ${cols.map(c => `<th style="padding:9px 6px;text-align:center">${esc(c.label)}</th>`).join('')}
             </tr>
           </thead>
           <tbody>${rowsHtml}</tbody>
           <tfoot>
             <tr style="background:#FF8A00;color:#fff;font-weight:800">
-              <td colspan="4" style="padding:9px 12px;text-align:right;font-size:12px">الإجمالي</td>
+              <td colspan="${cols.length-1}" style="padding:9px 12px;text-align:right;font-size:12px">الإجمالي</td>
               <td style="padding:9px 12px;text-align:center;font-size:13px">${m.totalPanels}</td>
             </tr>
           </tfoot>
         </table>
         <style>
-          #pdfReport tbody td { padding:7px 6px; text-align:center; border-bottom:1px solid #EEF2F7; color:#1F2937 }
+          #pdfReport tbody td { padding:7px 6px; border-bottom:1px solid #EEF2F7; color:#1F2937 }
           #pdfReport tbody tr:nth-child(even) td { background:#F9FAFB }
         </style>
       </div>
 
-      <!-- SUMMARY -->
-      <div style="padding:18px 28px 0">
-        <div style="font-size:13px;font-weight:800;color:#0F141B;margin-bottom:8px;border-right:4px solid #FF8A00;padding-right:10px">ملخص التقرير</div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
-          ${[
-            ['إجمالي الألواح', m.totalPanels],
-            ['عدد المجموعات (Strings)', m.totalStrings],
-            ['فترة الضمان', m.warrantyPeriod]
-          ].map(([l,v]) => `
-            <div style="border:1px solid #E5E7EB;border-top:4px solid #FF8A00;border-radius:10px;padding:12px 14px;background:#fff">
-              <div style="font-size:10.5px;color:#6B7280;font-weight:700">${l}</div>
-              <div style="font-size:18px;font-weight:800;color:#0F141B;margin-top:4px">${esc(v)}</div>
-            </div>`).join('')}
-        </div>
-      </div>
-
-      <!-- SIGNATURES -->
-      <div style="padding:24px 28px 18px">
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px">
-          ${['توقيع الفني','توقيع العميل','ختم الشركة'].map(l => `
-            <div style="text-align:center">
-              <div style="height:54px;border-bottom:1.5px dashed #9CA3AF;margin-bottom:6px"></div>
-              <div style="font-size:11px;font-weight:700;color:#374151">${l}</div>
-            </div>`).join('')}
-        </div>
-      </div>
+      ${summaryHtml}
+      ${signaturesHtml}
 
       <div style="padding:10px 28px;border-top:1px solid #E5E7EB;background:#F9FAFB;display:flex;justify-content:space-between;font-size:10px;color:#6B7280">
-        <div>© ${new Date().getFullYear()} ${esc(m.companyName)} — تقرير ضمان رسمي</div>
+        <div>© ${new Date().getFullYear()} ${esc(m.companyName)} — ${esc(m.tpl.label)}</div>
         <div>${m.totalPanels} لوح · ${m.totalStrings} مجموعة</div>
       </div>
     </div>`;
@@ -1841,15 +2036,17 @@ async function _ensureCairoLoaded() {
     } catch(_) {}
 }
 
-async function exportPDF() {
+async function exportPDF(optsArg) {
     if (!panels.length) { showToast('لا توجد بيانات', 'warning'); return; }
+    const meta = _getReportMeta(optsArg);
+    if (!meta.body.length) { showToast('لا توجد بيانات للنطاق المحدد', 'warning'); return; }
     showToast('جاري إنشاء التقرير...', 'info');
 
     const host = document.createElement('div');
     host.setAttribute('dir', 'rtl');
     host.lang = 'ar';
     host.style.cssText = 'position:fixed;top:0;left:0;width:794px;background:#fff;z-index:-1;opacity:0;pointer-events:none';
-    host.innerHTML = _buildPdfHTML();
+    host.innerHTML = _buildPdfHTML(optsArg);
     document.body.appendChild(host);
 
     try {
@@ -1870,8 +2067,8 @@ async function exportPDF() {
 
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4', compress: true });
-        const pageW = pdf.internal.pageSize.getWidth();    // 595.28
-        const pageH = pdf.internal.pageSize.getHeight();   // 841.89
+        const pageW = pdf.internal.pageSize.getWidth();
+        const pageH = pdf.internal.pageSize.getHeight();
         const footerH = 22;
         const usableH = pageH - footerH;
 
@@ -1893,7 +2090,6 @@ async function exportPDF() {
             if (pageIndex > 0) pdf.addPage();
             pdf.addImage(imgData, 'JPEG', 0, 0, pageW, imgH, undefined, 'FAST');
 
-            // Footer band with page numbers
             pdf.setFillColor(15,20,27);
             pdf.rect(0, pageH - footerH, pageW, footerH, 'F');
             pdf.setFont('helvetica','normal');
@@ -1907,11 +2103,11 @@ async function exportPDF() {
             pageIndex++;
         }
 
-        pdf.save(`تقرير-ضمان-${new Date().toISOString().slice(0,10)}.pdf`);
-        showToast('تم تصدير PDF بنجاح', 'success');
+        pdf.save(`${meta.tpl.label}-${new Date().toISOString().slice(0,10)}.pdf`);
+        showToast('تم تصدير PDF: ' + meta.tpl.label, 'success');
     } catch (e) {
         console.error(e);
-        showToast('تعذر إنشاء PDF: ' + (e && e.message ? e.message : ''), 'error');
+        showToast('تعذر إنشاء PDF', 'error');
     } finally {
         host.remove();
     }

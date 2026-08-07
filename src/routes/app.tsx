@@ -20,7 +20,7 @@ function AppShell() {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
       setAuthed(!!session);
-      if (!session) navigate({ to: "/auth" });
+      if (!session) navigate({ to: "/auth", search: { mode: "login" } });
     });
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) {
@@ -28,7 +28,7 @@ function AppShell() {
         setChecking(false);
       } else {
         setChecking(false);
-        navigate({ to: "/auth" });
+        navigate({ to: "/auth", search: { mode: "login" } });
       }
     });
     return () => subscription.unsubscribe();
