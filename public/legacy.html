@@ -687,8 +687,46 @@ s="header">
     </div>
     <div class="footer-right">
         <button class="btn btn-secondary btn-sm" onclick="backupData()"><i class="fas fa-file-code"></i> JSON</button>
-        <button class="btn btn-blue btn-sm" onclick="exportExcel()"><i class="fas fa-file-excel"></i> Excel</button>
-        <button class="btn btn-primary btn-sm" onclick="exportPDF()"><i class="fas fa-file-pdf"></i> PDF</button>
+        <button class="btn btn-blue btn-sm" onclick="openReportDialog('excel')"><i class="fas fa-file-excel"></i> Excel</button>
+        <button class="btn btn-primary btn-sm" onclick="openReportDialog('pdf')"><i class="fas fa-file-pdf"></i> PDF</button>
+    </div>
+</div>
+
+<div id="reportModal" class="modal-overlay" onclick="if(event.target===this)closeReportDialog()">
+    <div class="modal" style="max-width:520px">
+        <div class="modal-header">
+            <h3><i class="fas fa-sliders-h"></i> خيارات التقرير (<span id="reportTargetLabel">PDF</span>)</h3>
+            <button type="button" class="modal-close" onclick="closeReportDialog()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="reportTarget" value="pdf">
+            <div class="form-group">
+                <label>نوع التقرير (القالب)</label>
+                <select id="reportType"></select>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <div class="form-group"><label>من تاريخ</label><input type="date" id="reportFrom"></div>
+                <div class="form-group"><label>إلى تاريخ</label><input type="date" id="reportTo"></div>
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="setReportRange(7)">آخر 7 أيام</button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="setReportRange(30)">آخر 30 يوماً</button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="setReportRange(90)">آخر 90 يوماً</button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="setReportRange(0)">كل الفترات</button>
+            </div>
+            <div class="form-group"><label>اسم الشركة</label><input type="text" id="reportCompany" placeholder="اسم الشركة"></div>
+            <div class="form-group"><label>اسم الشركة (إنجليزي)</label><input type="text" id="reportCompanyEn" placeholder="Company Name"></div>
+            <div class="form-group"><label>فترة الضمان</label><input type="text" id="reportWarranty" placeholder="25 سنة للأداء / 12 سنة للمنتج"></div>
+            <div style="display:flex;flex-direction:column;gap:8px;font-size:13px">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="reportSummary" checked> تضمين قسم الملخص</label>
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="reportSignatures" checked> تضمين التوقيعات والختم</label>
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="reportUseFilters" checked> تطبيق فلاتر الجدول الحالية</label>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeReportDialog()">إلغاء</button>
+            <button type="button" class="btn btn-primary" onclick="runReportExport()"><i class="fas fa-download"></i> تصدير</button>
+        </div>
     </div>
 </div>
 
