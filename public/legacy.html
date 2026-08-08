@@ -702,8 +702,20 @@ s="header">
             <input type="hidden" id="reportTarget" value="pdf">
             <div class="form-group">
                 <label>نوع التقرير (القالب)</label>
-                <select id="reportType"></select>
+                <select id="reportType" onchange="renderReportColumns()"></select>
             </div>
+            <div class="form-group">
+                <label style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                    <span>أعمدة ملف Excel</span>
+                    <span style="display:flex;gap:6px">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="toggleAllReportColumns(true)">تحديد الكل</button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="toggleAllReportColumns(false)">إلغاء الكل</button>
+                    </span>
+                </label>
+                <div id="reportColumns" style="display:flex;flex-wrap:wrap;gap:8px;padding:10px;border:1px solid rgba(255,138,0,.25);border-radius:10px;font-size:13px"></div>
+                <small style="opacity:.7">تُحفظ التحديدات لكل نوع تقرير على هذا الجهاز.</small>
+            </div>
+
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
                 <div class="form-group"><label>من تاريخ</label><input type="date" id="reportFrom"></div>
                 <div class="form-group"><label>إلى تاريخ</label><input type="date" id="reportTo"></div>
