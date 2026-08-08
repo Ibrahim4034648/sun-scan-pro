@@ -1667,6 +1667,7 @@ const REPORT_TEMPLATES = {
 function getReportOptions() {
     let o = {};
     try { o = JSON.parse(localStorage.getItem('reportOptions_v1') || '{}'); } catch(e) {}
+    const cols = (o.columns && typeof o.columns === 'object') ? o.columns : {};
     return {
         type: REPORT_TEMPLATES[o.type] ? o.type : 'warranty',
         from: o.from || '',
@@ -1676,11 +1677,39 @@ function getReportOptions() {
         warrantyPeriod: o.warrantyPeriod || REPORT_DEFAULTS.warrantyPeriod,
         summary: o.summary !== false,
         signatures: o.signatures !== false,
-        useFilters: o.useFilters !== false
+        useFilters: o.useFilters !== false,
+        columns: cols
     };
 }
 function saveReportOptions(o) {
     try { localStorage.setItem('reportOptions_v1', JSON.stringify(o)); } catch(e) {}
+}
+
+// Columns selected for a template (fallback: all columns)
+function getTemplateColumnKeys(type, saved) {
+    const tpl = REPORT_TEMPLATES[type] || REPORT_TEMPLATES.warranty;
+    const all = tpl.columns.map(c => c.key);
+    const sel = (saved && saved[type]) || null;
+    if (!Array.isArray(sel)) return all;
+    const keep = all.filter(k => sel.indexOf(k) !== -1);
+    return keep.length ? keep : all;
+}
+
+function renderReportColumns() {
+    const type = document.getElementById('reportType').value;
+    const saved = getReportOptions().columns;
+    const active = getTemplateColumnKeys(type, saved);
+    const tpl = REPORT_TEMPLATES[type] || REPORT_TEMPLATES.warranty;
+    document.getElementById('reportColumns').innerHTML = tpl.columns.map(c =>
+        '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;background:rgba(255,255,255,.04);padding:6px 10px;border-radius:8px">' +
+        '<input type="checkbox" class="report-col" value="' + c.key + '"' +
+        (active.indexOf(c.key) !== -1 ? ' checked' : '') + '> ' + c.label + '</label>').join('');
+}
+function toggleAllReportColumns(on) {
+    document.querySelectorAll('#reportColumns .report-col').forEach(el => { el.checked = on; });
+}
+function getSelectedReportColumns() {
+    return [...document.querySelectorAll('#reportColumns .report-col:checked')].map(el => el.value);
 }
 
 function openReportDialog(target) {
@@ -1700,6 +1729,7 @@ function openReportDialog(target) {
     document.getElementById('reportSignatures').checked = o.signatures;
     document.getElementById('reportUseFilters').checked = o.useFilters;
     document.getElementById('reportTargetLabel').textContent = target === 'excel' ? 'Excel' : 'PDF';
+    renderReportColumns();
     modal.classList.add('show');
 }
 function closeReportDialog() {
@@ -1712,8 +1742,12 @@ function setReportRange(days) {
     document.getElementById('reportTo').value = days ? to.toISOString().slice(0,10) : '';
 }
 function runReportExport() {
+    const type = document.getElementById('reportType').value;
+    const chosen = getSelectedReportColumns();
+    if (!chosen.length) { showToast('اختر عموداً واحداً على الأقل', 'warning'); return; }
+    const columns = Object.assign({}, getReportOptions().columns, { [type]: chosen });
     const opts = {
-        type: document.getElementById('reportType').value,
+        type: type,
         from: document.getElementById('reportFrom').value,
         to: document.getElementById('reportTo').value,
         companyName: (document.getElementById('reportCompany').value || '').trim() || REPORT_DEFAULTS.companyName,
@@ -1721,13 +1755,15 @@ function runReportExport() {
         warrantyPeriod: (document.getElementById('reportWarranty').value || '').trim() || REPORT_DEFAULTS.warrantyPeriod,
         summary: document.getElementById('reportSummary').checked,
         signatures: document.getElementById('reportSignatures').checked,
-        useFilters: document.getElementById('reportUseFilters').checked
+        useFilters: document.getElementById('reportUseFilters').checked,
+        columns: columns
     };
     saveReportOptions(opts);
     const target = document.getElementById('reportTarget').value;
     closeReportDialog();
     if (target === 'excel') exportExcel(opts); else exportPDF(opts);
 }
+
 
 function _inRange(p, from, to) {
     if (!from && !to) return true;
