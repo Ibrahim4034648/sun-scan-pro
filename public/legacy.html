@@ -950,18 +950,41 @@ function openProject(id) {
     renderTable();
 }
 
-function openProjectModal() {
-    // populate customer select with stored list
+// Build the customer list from every available source (stored list + projects + panels)
+function allKnownCustomers() {
+    const fromProjects = (typeof projectsList !== 'undefined' ? projectsList : []).map(p => (p.customer || '').trim());
+    const fromPanels = (typeof panels !== 'undefined' ? panels : [])
+        .map(p => (p.customer || '').trim())
+        .filter(v => v && v !== 'غير محدد');
+    return [...new Set([...(storedCustomers || []), ...fromProjects, ...fromPanels].filter(Boolean))]
+        .sort((a, b) => a.localeCompare(b, 'ar'));
+}
+
+function populateModalCustomerSelect(selected) {
     const sel = document.getElementById('pmCustomer');
-    let html = '<option value="">-- اختر --</option>';
-    storedCustomers.forEach(c => { html += '<option value="' + escapeHtml(c) + '">' + escapeHtml(c) + '</option>'; });
+    if (!sel) return [];
+    const list = allKnownCustomers();
+    let html = '<option value="">' + (list.length ? '-- اختر العميل --' : '-- لا يوجد عملاء، أضف عميلاً --') + '</option>';
+    list.forEach(c => { html += '<option value="' + escapeHtml(c) + '">' + escapeHtml(c) + '</option>'; });
     html += '<option value="__new__">+ إضافة عميل جديد</option>';
     sel.innerHTML = html;
+    if (selected && list.includes(selected)) sel.value = selected;
+    return list;
+}
+
+function openProjectModal() {
+    const list = populateModalCustomerSelect();
     document.getElementById('pmName').value = '';
     document.getElementById('pmDate').value = new Date().toISOString().slice(0,10);
     document.getElementById('pmNewCustomerRow').classList.remove('show');
     document.getElementById('pmNewCustomerInput').value = '';
     document.getElementById('projectModal').classList.add('show');
+    // No customers yet? open the "add customer" field directly so the field is never a dead end
+    if (!list.length) {
+        const sel = document.getElementById('pmCustomer');
+        sel.value = '__new__';
+        handleSelectChange('pmCustomer', 'pmNewCustomerInput', 'pmNewCustomerRow');
+    }
     setTimeout(() => document.getElementById('pmName').focus(), 50);
 }
 function closeProjectModal() {
@@ -973,17 +996,18 @@ function saveModalNewCustomer() {
     const val = (input.value || '').trim();
     if (!val) { showToast('أدخل اسم العميل', 'error'); input.focus(); return; }
     if (val.length > 100) { showToast('الاسم طويل جداً', 'error'); return; }
-    if (!storedCustomers.includes(val)) { storedCustomers.push(val); saveStoredCustomers(); }
-    // refresh modal customer select
-    const sel = document.getElementById('pmCustomer');
-    let html = '<option value="">-- اختر --</option>';
-    storedCustomers.forEach(c => { html += '<option value="' + escapeHtml(c) + '">' + escapeHtml(c) + '</option>'; });
-    html += '<option value="__new__">+ إضافة عميل جديد</option>';
-    sel.innerHTML = html;
-    sel.value = val;
+    if (allKnownCustomers().includes(val)) {
+        populateModalCustomerSelect(val);
+        document.getElementById('pmNewCustomerRow').classList.remove('show');
+        input.value = '';
+        showToast('العميل موجود مسبقاً، تم اختياره', 'warning');
+        return;
+    }
+    storedCustomers.push(val); saveStoredCustomers();
+    populateModalCustomerSelect(val);
     document.getElementById('pmNewCustomerRow').classList.remove('show');
     input.value = '';
-    // also refresh main form customer dropdown if visible
+    // also refresh main form customer dropdown
     populateCustomerSelect();
     showToast('تم حفظ العميل: ' + val, 'success');
 }
@@ -993,6 +1017,7 @@ function cancelModalNewCustomer() {
     const sel = document.getElementById('pmCustomer');
     if (sel.value === '__new__') sel.value = '';
 }
+
 
 function saveProject() {
     const name = (document.getElementById('pmName').value || '').trim();
