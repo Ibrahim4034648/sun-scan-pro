@@ -504,7 +504,7 @@ s="header">
                     <option value="__new__">+ إضافة عميل جديد</option>
                 </select>
                 <div id="pmNewCustomerRow" class="new-row">
-                    <input type="text" id="pmNewCustomerInput" class="new-input" placeholder="اسم العميل الجديد">
+                    <input type="text" id="pmNewCustomerInput" class="new-input" placeholder="اسم العميل الجديد" onkeydown="if(event.key==='Enter'){event.preventDefault();saveModalNewCustomer();}">
                     <button type="button" class="save-new" onclick="saveModalNewCustomer()"><i class="fas fa-check"></i> حفظ</button>
                     <button type="button" class="cancel-new" onclick="cancelModalNewCustomer()" title="إلغاء"><i class="fas fa-times"></i></button>
                 </div>
