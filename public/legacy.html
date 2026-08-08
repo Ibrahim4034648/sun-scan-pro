@@ -1776,7 +1776,9 @@ function _inRange(p, from, to) {
 
 function _getReportMeta(opts) {
     const o = Object.assign(getReportOptions(), opts || {});
-    const tpl = REPORT_TEMPLATES[o.type] || REPORT_TEMPLATES.warranty;
+    const baseTpl = REPORT_TEMPLATES[o.type] || REPORT_TEMPLATES.warranty;
+    const keys = getTemplateColumnKeys(REPORT_TEMPLATES[o.type] ? o.type : 'warranty', o.columns);
+    const tpl = Object.assign({}, baseTpl, { columns: baseTpl.columns.filter(c => keys.indexOf(c.key) !== -1) });
 
     const mostCommon = (key, list) => {
         const counts = new Map();
