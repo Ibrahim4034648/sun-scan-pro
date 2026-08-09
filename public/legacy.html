@@ -1648,43 +1648,41 @@ const REPORT_DEFAULTS = {
     brandDark: '0F141B'
 };
 
+// Columns identical to the registered panels table
+const PANEL_COLUMNS = [
+    { key:'#',        label:'#',                 wch:6,  align:'center' },
+    { key:'serial',   label:'التسلسلي',          wch:26, align:'center', mono:true },
+    { key:'model',    label:'الموديل',           wch:22, align:'center' },
+    { key:'warranty', label:'المجموعة (String)', wch:18, align:'center' },
+    { key:'date',     label:'التاريخ',           wch:16, align:'center' },
+    { key:'location', label:'الموقع',            wch:20, align:'center' },
+    { key:'project',  label:'المشروع',           wch:22, align:'center' },
+    { key:'customer', label:'العميل',            wch:22, align:'center' },
+    { key:'notes',    label:'ملاحظة',            wch:34, align:'right'  }
+];
+const panelCols = () => PANEL_COLUMNS.map(c => Object.assign({}, c));
+
 // ---------- Templates ----------
 const REPORT_TEMPLATES = {
     warranty: {
         label: 'تقرير ضمان رسمي',
         titleAr: 'تقرير ضمان الألواح الشمسية',
         titleEn: 'SOLAR PANEL WARRANTY REPORT',
-        columns: [
-            { key:'#',        label:'#',                 wch:6,  align:'center' },
-            { key:'serial',   label:'الرقم التسلسلي',    wch:26, align:'center', mono:true },
-            { key:'warranty', label:'المجموعة (String)', wch:18, align:'center' },
-            { key:'model',    label:'الموديل',           wch:24, align:'center' },
-            { key:'notes',    label:'ملاحظات',           wch:40, align:'right'  }
-        ],
+        columns: panelCols(),
         summary: true, signatures: true, table: true
     },
     inventory: {
         label: 'تقرير جرد الألواح',
         titleAr: 'تقرير جرد الألواح المركبة',
         titleEn: 'INSTALLED PANELS INVENTORY REPORT',
-        columns: [
-            { key:'#',        label:'#',                 wch:6,  align:'center' },
-            { key:'serial',   label:'الرقم التسلسلي',    wch:26, align:'center', mono:true },
-            { key:'model',    label:'الموديل',           wch:22, align:'center' },
-            { key:'warranty', label:'المجموعة (String)', wch:16, align:'center' },
-            { key:'location', label:'الموقع',            wch:20, align:'center' },
-            { key:'date',     label:'تاريخ التركيب',     wch:18, align:'center' }
-        ],
+        columns: panelCols(),
         summary: true, signatures: false, table: true
     },
     serials: {
         label: 'قائمة الأرقام التسلسلية',
         titleAr: 'قائمة الأرقام التسلسلية',
         titleEn: 'SERIAL NUMBERS LIST',
-        columns: [
-            { key:'#',      label:'#',              wch:6,  align:'center' },
-            { key:'serial', label:'الرقم التسلسلي', wch:32, align:'center', mono:true }
-        ],
+        columns: panelCols(),
         summary: false, signatures: false, table: true
     },
     summary: {
