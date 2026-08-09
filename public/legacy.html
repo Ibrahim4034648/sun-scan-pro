@@ -206,6 +206,7 @@
         .new-row .save-new { background: linear-gradient(135deg,#FF8A00,#e57a00); color:#fff; border:none; padding:0 14px; border-radius:10px; font-weight:700; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; white-space:nowrap; }
         .new-row .save-new:hover { filter: brightness(1.08); }
         .new-row .cancel-new { background:#f3f4f6; color:#374151; border:1px solid #e5e7eb; padding:0 12px; border-radius:10px; cursor:pointer; }
+        .add-customer-trigger { width:100%; margin-top:8px; min-height:42px; border:1px dashed var(--solar-orange); background:rgba(255,138,0,.08); color:var(--solar-orange-dark); border-radius:10px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:7px; }
 
         /* ========= Projects Screen ========= */
         #projectsScreen { display:none; max-width:1200px; margin:0 auto; padding:16px; padding-bottom:40px; }
@@ -503,6 +504,7 @@ s="header">
                     <option value="">-- اختر --</option>
                     <option value="__new__">+ إضافة عميل جديد</option>
                 </select>
+                <button type="button" class="add-customer-trigger" onclick="openModalNewCustomer()"><i class="fas fa-user-plus"></i> إضافة عميل جديد</button>
                 <div id="pmNewCustomerRow" class="new-row">
                     <input type="text" id="pmNewCustomerInput" class="new-input" placeholder="اسم العميل الجديد" onkeydown="if(event.key==='Enter'){event.preventDefault();saveModalNewCustomer();}">
                     <button type="button" class="save-new" onclick="saveModalNewCustomer()"><i class="fas fa-check"></i> حفظ</button>
@@ -986,6 +988,16 @@ function openProjectModal() {
         handleSelectChange('pmCustomer', 'pmNewCustomerInput', 'pmNewCustomerRow');
     }
     setTimeout(() => document.getElementById('pmName').focus(), 50);
+}
+function openModalNewCustomer() {
+    const sel = document.getElementById('pmCustomer');
+    const row = document.getElementById('pmNewCustomerRow');
+    const input = document.getElementById('pmNewCustomerInput');
+    if (!sel || !row || !input) return;
+    sel.value = '__new__';
+    row.classList.add('show');
+    input.value = '';
+    setTimeout(() => input.focus(), 50);
 }
 function closeProjectModal() {
     document.getElementById('projectModal').classList.remove('show');
