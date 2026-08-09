@@ -1749,12 +1749,102 @@ function renderReportColumns() {
         '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;background:rgba(255,255,255,.04);padding:6px 10px;border-radius:8px">' +
         '<input type="checkbox" class="report-col" value="' + c.key + '"' +
         (active.indexOf(c.key) !== -1 ? ' checked' : '') + '> ' + c.label + '</label>').join('');
+    refreshReportPreview();
 }
 function toggleAllReportColumns(on) {
     document.querySelectorAll('#reportColumns .report-col').forEach(el => { el.checked = on; });
+    refreshReportPreview();
 }
 function getSelectedReportColumns() {
     return [...document.querySelectorAll('#reportColumns .report-col:checked')].map(el => el.value);
+}
+
+function collectReportFormOpts() {
+    const type = document.getElementById('reportType').value;
+    const chosen = getSelectedReportColumns();
+    const columns = Object.assign({}, getReportOptions().columns, { [type]: chosen });
+    return {
+        type: type,
+        from: document.getElementById('reportFrom').value,
+        to: document.getElementById('reportTo').value,
+        companyName: (document.getElementById('reportCompany').value || '').trim() || REPORT_DEFAULTS.companyName,
+        companyNameEn: (document.getElementById('reportCompanyEn').value || '').trim() || REPORT_DEFAULTS.companyNameEn,
+        warrantyPeriod: (document.getElementById('reportWarranty').value || '').trim() || REPORT_DEFAULTS.warrantyPeriod,
+        summary: document.getElementById('reportSummary').checked,
+        signatures: document.getElementById('reportSignatures').checked,
+        useFilters: document.getElementById('reportUseFilters').checked,
+        columns: columns,
+        _chosen: chosen
+    };
+}
+
+// ---------- Live preview (Excel / PDF) ----------
+function refreshReportPreview() {
+    const host = document.getElementById('reportPreview');
+    if (!host) return;
+    const target = document.getElementById('reportTarget').value;
+    const lbl = document.getElementById('previewTargetLabel');
+    if (lbl) lbl.textContent = target === 'excel' ? 'Excel' : 'PDF';
+
+    const opts = collectReportFormOpts();
+    const stats = document.getElementById('reportPreviewStats');
+    if (!opts._chosen.length) {
+        host.innerHTML = '<div style="padding:16px;text-align:center;opacity:.7">اختر عموداً واحداً على الأقل لعرض المعاينة</div>';
+        if (stats) stats.textContent = '';
+        return;
+    }
+    let m;
+    try { m = _getReportMeta(opts); } catch (e) { console.error(e); host.innerHTML = ''; return; }
+
+    const cols = m.tpl.columns;
+    const rows = m.body.slice(0, 5);
+    if (stats) stats.textContent = m.body.length + ' صف · ' + cols.length + ' عمود';
+
+    const accent = target === 'excel' ? '#1D6F42' : '#FF8A00';
+    let html = '<div style="font-family:inherit">';
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;border-bottom:2px solid ' + accent + ';padding-bottom:6px;margin-bottom:8px">' +
+        '<strong style="font-size:13px">' + escapeHtml(m.tpl.titleAr) + '</strong>' +
+        '<span style="font-size:11px;opacity:.7">' + escapeHtml(m.companyName) + '</span></div>';
+    html += '<div style="font-size:11px;opacity:.8;margin-bottom:8px">العميل: ' + escapeHtml(m.customer) +
+        ' · المشروع: ' + escapeHtml(m.project) + ' · الفترة: ' + escapeHtml(m.rangeLabel) + '</div>';
+
+    if (!m.body.length) {
+        html += '<div style="padding:14px;text-align:center;opacity:.7">لا توجد بيانات مطابقة للفلاتر والفترة المحددة</div>';
+    } else {
+        html += '<table style="width:100%;border-collapse:collapse;font-size:11px"><thead><tr>' +
+            cols.map(c => '<th style="border:1px solid rgba(255,255,255,.12);background:' + accent +
+                ';color:#fff;padding:5px 6px;white-space:nowrap">' + escapeHtml(c.label) + '</th>').join('') +
+            '</tr></thead><tbody>';
+        rows.forEach((r, i) => {
+            html += '<tr style="background:' + (i % 2 ? 'rgba(255,255,255,.04)' : 'transparent') + '">' +
+                cols.map(c => '<td style="border:1px solid rgba(255,255,255,.1);padding:5px 6px;text-align:' +
+                    (c.align === 'right' ? 'right' : 'center') + '">' +
+                    escapeHtml(String(r[c.key] == null ? '' : r[c.key])) + '</td>').join('') + '</tr>';
+        });
+        html += '</tbody></table>';
+        if (m.body.length > rows.length) {
+            html += '<div style="font-size:11px;opacity:.7;margin-top:6px">… و ' + (m.body.length - rows.length) + ' صف إضافي في الملف النهائي</div>';
+        }
+        if (opts.summary && m.tpl.summary) {
+            html += '<div style="font-size:11px;margin-top:8px;opacity:.85">الملخص: إجمالي الألواح ' + m.totalPanels +
+                ' · المجموعات ' + m.totalStrings + ' · الموديلات ' + m.totalModels + '</div>';
+        }
+        if (opts.signatures && m.tpl.signatures) {
+            html += '<div style="font-size:11px;margin-top:6px;opacity:.7">التوقيعات والختم: مُدرجة</div>';
+        }
+    }
+    html += '</div>';
+    host.innerHTML = html;
+}
+
+function bindReportPreviewEvents() {
+    const modal = document.getElementById('reportModal');
+    if (!modal || modal.dataset.previewBound) return;
+    modal.dataset.previewBound = '1';
+    modal.addEventListener('change', refreshReportPreview);
+    modal.addEventListener('input', (e) => {
+        if (e.target && e.target.tagName === 'INPUT') refreshReportPreview();
+    });
 }
 
 function openReportDialog(target) {
@@ -1775,6 +1865,7 @@ function openReportDialog(target) {
     document.getElementById('reportUseFilters').checked = o.useFilters;
     document.getElementById('reportTargetLabel').textContent = target === 'excel' ? 'Excel' : 'PDF';
     renderReportColumns();
+    bindReportPreviewEvents();
     modal.classList.add('show');
 }
 function closeReportDialog() {
@@ -1785,29 +1876,18 @@ function setReportRange(days) {
     const from = new Date(to.getTime() - (days - 1) * 86400000);
     document.getElementById('reportFrom').value = days ? from.toISOString().slice(0,10) : '';
     document.getElementById('reportTo').value = days ? to.toISOString().slice(0,10) : '';
+    refreshReportPreview();
 }
 function runReportExport() {
-    const type = document.getElementById('reportType').value;
-    const chosen = getSelectedReportColumns();
-    if (!chosen.length) { showToast('اختر عموداً واحداً على الأقل', 'warning'); return; }
-    const columns = Object.assign({}, getReportOptions().columns, { [type]: chosen });
-    const opts = {
-        type: type,
-        from: document.getElementById('reportFrom').value,
-        to: document.getElementById('reportTo').value,
-        companyName: (document.getElementById('reportCompany').value || '').trim() || REPORT_DEFAULTS.companyName,
-        companyNameEn: (document.getElementById('reportCompanyEn').value || '').trim() || REPORT_DEFAULTS.companyNameEn,
-        warrantyPeriod: (document.getElementById('reportWarranty').value || '').trim() || REPORT_DEFAULTS.warrantyPeriod,
-        summary: document.getElementById('reportSummary').checked,
-        signatures: document.getElementById('reportSignatures').checked,
-        useFilters: document.getElementById('reportUseFilters').checked,
-        columns: columns
-    };
+    const opts = collectReportFormOpts();
+    if (!opts._chosen.length) { showToast('اختر عموداً واحداً على الأقل', 'warning'); return; }
+    delete opts._chosen;
     saveReportOptions(opts);
     const target = document.getElementById('reportTarget').value;
     closeReportDialog();
     if (target === 'excel') exportExcel(opts); else exportPDF(opts);
 }
+
 
 
 function _inRange(p, from, to) {
