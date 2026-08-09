@@ -736,7 +736,17 @@ s="header">
                 <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="reportSignatures" checked> تضمين التوقيعات والختم</label>
                 <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="reportUseFilters" checked> تطبيق فلاتر الجدول الحالية</label>
             </div>
+
+            <div class="form-group" style="margin-top:12px">
+                <label style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                    <span><i class="fas fa-eye"></i> معاينة فورية (<span id="previewTargetLabel">PDF</span>)</span>
+                    <span id="reportPreviewStats" style="font-size:12px;opacity:.75"></span>
+                </label>
+                <div id="reportPreview" style="border:1px solid rgba(255,138,0,.25);border-radius:10px;padding:10px;background:rgba(255,255,255,.03);overflow:auto;max-height:260px"></div>
+                <small style="opacity:.7">تعرض المعاينة الأعمدة المختارة وأول 5 صفوف قبل بدء التصدير.</small>
+            </div>
         </div>
+
         <div class="modal-footer">
             <button type="button" class="btn btn-secondary" onclick="closeReportDialog()">إلغاء</button>
             <button type="button" class="btn btn-primary" onclick="runReportExport()"><i class="fas fa-download"></i> تصدير</button>
