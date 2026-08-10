@@ -22,6 +22,12 @@ function AppShell() {
   const [authed, setAuthed] = useState(false);
 
   useEffect(() => {
+    const removeBridge = installLegacyBridge();
+    void bootstrapOfflineFirst();
+    return removeBridge;
+  }, []);
+
+  useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
       setAuthed(!!session);
       if (!session) navigate({ to: "/auth", search: { mode: "login" } });
@@ -70,6 +76,7 @@ function AppShell() {
           <path d="M3 12l9-9 9 9M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10" />
         </svg>
       </button>
+      <NetworkStatus />
     </>
   );
 }
