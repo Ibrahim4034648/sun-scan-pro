@@ -20,6 +20,8 @@ export interface PanelRecord {
   serial: string;
   model: string;
   warrantyYears: number | null;
+  /** Position of the panel inside the solar strings, e.g. "St3". */
+  stringGroup: string;
   installDate: string;
   installTime: string;
   customer: string;
@@ -212,6 +214,7 @@ CREATE TABLE IF NOT EXISTS panels (
   serialKey TEXT NOT NULL,
   model TEXT,
   warrantyYears INTEGER,
+  stringGroup TEXT,
   installDate TEXT,
   installTime TEXT,
   customer TEXT,
@@ -287,9 +290,9 @@ class SqliteStore implements Store {
   async putPanel(panel: PanelRecord): Promise<void> {
     await this.conn().run(
       `INSERT OR REPLACE INTO panels
-        (id, remoteId, serial, serialKey, model, warrantyYears, installDate, installTime,
+        (id, remoteId, serial, serialKey, model, warrantyYears, stringGroup, installDate, installTime,
          customer, project, location, notes, status, createdAt, updatedAt, syncStatus, deleted)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
         panel.id,
         panel.remoteId,
@@ -297,6 +300,7 @@ class SqliteStore implements Store {
         normalizeSerial(panel.serial),
         panel.model,
         panel.warrantyYears,
+        panel.stringGroup,
         panel.installDate,
         panel.installTime,
         panel.customer,
@@ -390,6 +394,7 @@ function rowToPanel(row: Record<string, unknown>): PanelRecord {
     serial: String(row.serial ?? ""),
     model: String(row.model ?? ""),
     warrantyYears: row.warrantyYears == null ? null : Number(row.warrantyYears),
+    stringGroup: String(row.stringGroup ?? ""),
     installDate: String(row.installDate ?? ""),
     installTime: String(row.installTime ?? ""),
     customer: String(row.customer ?? ""),
@@ -487,7 +492,16 @@ class DatabaseService {
     const rows = await this.getPanels();
     if (!q) return rows;
     return rows.filter((r) =>
-      [r.serial, r.model, r.customer, r.project, r.location, r.notes, r.installDate].some((v) =>
+      [
+        r.serial,
+        r.model,
+        r.customer,
+        r.project,
+        r.location,
+        r.notes,
+        r.installDate,
+        r.stringGroup,
+      ].some((v) =>
         (v ?? "").toString().toLowerCase().includes(q),
       ),
     );
@@ -504,6 +518,7 @@ class DatabaseService {
       serial: input.serial.trim(),
       model: input.model,
       warrantyYears: input.warrantyYears,
+      stringGroup: input.stringGroup ?? "",
       installDate: input.installDate,
       installTime: input.installTime,
       customer: input.customer,
