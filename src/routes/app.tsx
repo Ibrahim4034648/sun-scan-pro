@@ -1,6 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { NetworkStatus } from "@/components/NetworkStatus";
+import { installLegacyBridge } from "@/lib/legacy-bridge";
+import { bootstrapOfflineFirst } from "@/lib/sync";
+
 
 export const Route = createFileRoute("/app")({
   head: () => ({
@@ -16,6 +20,12 @@ function AppShell() {
   const navigate = useNavigate();
   const [checking, setChecking] = useState(true);
   const [authed, setAuthed] = useState(false);
+
+  useEffect(() => {
+    const removeBridge = installLegacyBridge();
+    void bootstrapOfflineFirst();
+    return removeBridge;
+  }, []);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
@@ -66,6 +76,7 @@ function AppShell() {
           <path d="M3 12l9-9 9 9M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10" />
         </svg>
       </button>
+      <NetworkStatus />
     </>
   );
 }
