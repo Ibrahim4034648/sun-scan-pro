@@ -2707,7 +2707,12 @@ document.addEventListener('DOMContentLoaded', () => {
   window.__spwmsSync = flushQueue;
 
   // ---------- Init ----------
+  async function bridgeOwnsData() {
+    try { return window.__spwmsBridgeReady ? await window.__spwmsBridgeReady : false; } catch(e) { return false; }
+  }
+
   async function init() {
+    if (await bridgeOwnsData()) { pill.style.display = 'none'; return; }
     // 1) Show cached data immediately so app works offline
     hydrateFromCache();
     updatePill();
@@ -2725,16 +2730,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Online/offline listeners → auto-sync
   window.addEventListener('online', async () => {
+    if (await bridgeOwnsData()) return;
     updatePill();
     if (!userId) { const u = await getUser(); if (u) userId = u.id; }
     await flushQueue();
     if (!didInitialFetch) await fetchAll();
   });
-  window.addEventListener('offline', updatePill);
+  window.addEventListener('offline', async () => { if (!(await bridgeOwnsData())) updatePill(); });
   // Periodic retry every 30s while queue non-empty
-  setInterval(() => { if (queue.length && navigator.onLine) flushQueue(); }, 30000);
+  setInterval(async () => { if (await bridgeOwnsData()) return; if (queue.length && navigator.onLine) flushQueue(); }, 30000);
 
-  sb.auth.onAuthStateChange((_e, session) => {
+  sb.auth.onAuthStateChange(async (_e, session) => {
+    if (await bridgeOwnsData()) { if (session && session.user) userId = session.user.id; return; }
     if (session && session.user) { userId = session.user.id; fetchAll().then(flushQueue); }
     else { userId = null; }
   });
@@ -2764,6 +2771,12 @@ document.addEventListener('DOMContentLoaded', () => {
       window.parent.postMessage({ channel: CHANNEL, direction: 'request', requestId, action, payload: payload || {} }, '*');
     });
   }
+
+  const readyPromise = call('ready', {}, 6000).then(() => true).catch((e) => {
+    console.warn('[spwms] offline-first bridge unavailable, using legacy storage', e);
+    return false;
+  });
+  window.__spwmsBridgeReady = readyPromise;
 
   async function refreshFromLocalDb() {
     const [dbPanels, dbProjects] = await Promise.all([call('listPanels'), call('listProjects')]);
@@ -2902,12 +2915,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function boot() {
-    try {
-      await call('ready', {}, 6000);
-    } catch (e) {
-      console.warn('[spwms] offline-first bridge unavailable, using legacy storage', e);
-      return;
-    }
+    if (!(await readyPromise)) return;
     installOverrides();
     try { await refreshFromLocalDb(); } catch (e) { console.error('local load failed', e); }
   }
