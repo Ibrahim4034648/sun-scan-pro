@@ -1,6 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { NetworkStatus } from "@/components/NetworkStatus";
+import { installLegacyBridge } from "@/lib/legacy-bridge";
+import { bootstrapOfflineFirst } from "@/lib/sync";
+
 
 export const Route = createFileRoute("/app")({
   head: () => ({
