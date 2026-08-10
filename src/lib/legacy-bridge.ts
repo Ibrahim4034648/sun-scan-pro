@@ -163,6 +163,59 @@ async function handle(action: string, payload: Record<string, unknown>): Promise
       return { ok: true };
     }
 
+    case "importLegacy": {
+      // One-time migration of the old localStorage cache into the local DB.
+      const rawPanels = Array.isArray(payload.panels) ? (payload.panels as Record<string, unknown>[]) : [];
+      const rawProjects = Array.isArray(payload.projects)
+        ? (payload.projects as Record<string, unknown>[])
+        : [];
+      let imported = 0;
+      for (const row of rawProjects) {
+        const name = str(row.name);
+        if (!name) continue;
+        const remoteId = str(row.remoteId) || null;
+        try {
+          await db.createProject({
+            name,
+            customer: str(row.customer),
+            projectDate: str(row.date),
+            remoteId,
+            syncStatus: remoteId ? "synced" : "pending",
+          });
+        } catch {
+          /* already present locally */
+        }
+      }
+      for (const row of rawPanels) {
+        const serial = str(row.serial);
+        if (!serial) continue;
+        const remoteId = str(row.dbId) || null;
+        const group = str(row.warranty);
+        try {
+          await db.createPanel({
+            serial,
+            model: str(row.model, "غير محدد"),
+            warrantyYears: groupToNumber(group),
+            stringGroup: group,
+            installDate: str(row.date),
+            installTime: str(row.time),
+            customer: str(row.customer, "غير محدد"),
+            project: str(row.project, "غير محدد"),
+            location: str(row.location, "حقل الألواح"),
+            notes: str(row.notes),
+            status: str(row.status, "نشط"),
+            remoteId,
+            syncStatus: remoteId ? "synced" : "pending",
+          });
+          imported += 1;
+        } catch {
+          /* duplicate serial: keep the existing local row */
+        }
+      }
+      void syncNow();
+      return { imported };
+    }
+
     case "sync": {
       await syncNow();
       return getSyncState();

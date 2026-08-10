@@ -2914,9 +2914,27 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   }
 
+  const MIGRATED_KEY = 'spwms_sqlite_migrated_v1';
+  async function migrateLegacyCacheOnce() {
+    if (localStorage.getItem(MIGRATED_KEY) === '1') return;
+    let cachedPanels = [], cachedProjects = [];
+    try { cachedPanels = JSON.parse(localStorage.getItem('spwms_cache_panels_v1') || '[]') || []; } catch(e) {}
+    try { cachedProjects = JSON.parse(localStorage.getItem('spwms_cache_projects_v1') || '[]') || []; } catch(e) {}
+    if (!cachedPanels.length && !cachedProjects.length) { localStorage.setItem(MIGRATED_KEY, '1'); return; }
+    let projDbMap = [];
+    try { projDbMap = JSON.parse(localStorage.getItem('spwms_projNameMap_v1') || '[]') || []; } catch(e) {}
+    const nameToDb = new Map(projDbMap);
+    await call('importLegacy', {
+      panels: cachedPanels.map(p => ({ serial: p.serial, model: p.model, warranty: p.warranty, date: p.date, time: p.time, customer: p.customer, project: p.project, location: p.location, notes: p.notes, status: p.status, dbId: p.__dbId || '' })),
+      projects: cachedProjects.map(p => ({ name: p.name, customer: p.customer, date: p.date, remoteId: nameToDb.get(p.name) || '' }))
+    }, 60000);
+    localStorage.setItem(MIGRATED_KEY, '1');
+  }
+
   async function boot() {
     if (!(await readyPromise)) return;
     installOverrides();
+    try { await migrateLegacyCacheOnce(); } catch (e) { console.warn('legacy migration skipped', e); }
     try { await refreshFromLocalDb(); } catch (e) { console.error('local load failed', e); }
   }
 
