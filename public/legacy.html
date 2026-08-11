@@ -1689,14 +1689,14 @@ const REPORT_TEMPLATES = {
         titleAr: 'تقرير جرد الألواح المركبة',
         titleEn: 'INSTALLED PANELS INVENTORY REPORT',
         columns: panelCols(),
-        summary: true, signatures: false, table: true
+        summary: true, signatures: true, table: true
     },
     serials: {
         label: 'قائمة الأرقام التسلسلية',
         titleAr: 'قائمة الأرقام التسلسلية',
         titleEn: 'SERIAL NUMBERS LIST',
         columns: panelCols(),
-        summary: false, signatures: false, table: true
+        summary: true, signatures: true, table: true
     },
     summary: {
         label: 'ملخص تنفيذي (حسب المجموعات)',
@@ -1972,7 +1972,7 @@ function _summaryPairs(m) {
         ['عدد المجموعات (Strings)', m.totalStrings],
         ['عدد الموديلات', m.totalModels]
     ];
-    if (m.tpl.signatures) pairs.push(['فترة الضمان', m.warrantyPeriod]);
+    pairs.push(['فترة الضمان', m.warrantyPeriod]);
     pairs.push(['نطاق التاريخ', m.rangeLabel]);
     return pairs;
 }
