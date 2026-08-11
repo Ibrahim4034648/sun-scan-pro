@@ -1414,11 +1414,14 @@ function onScanSuccess(decodedText, decodedResult) {
         showToast('تم القراءة: ' + serial, 'success');
         playBeep('success');
         if (navigator.vibrate) navigator.vibrate(50);
-        if (document.getElementById('continuousScan').checked) {
-            setTimeout(() => { if (input.value === serial) manualScan(); }, 400);
-        } else {
-            setTimeout(() => { stopScanner(); }, 300);
-        }
+        const continuous = document.getElementById('continuousScan').checked;
+        // Always register the scanned serial so it appears in the table immediately.
+        setTimeout(async () => {
+            if (input.value === serial) {
+                try { await manualScan(); } catch (e) { console.error('auto-save scan failed', e); }
+            }
+            if (!continuous) stopScanner();
+        }, 350);
     }
 }
 
