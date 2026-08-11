@@ -1644,13 +1644,23 @@ function updateFilters() {
 }
 
 // ===================== STATS =====================
-function updateStats() {
-    document.getElementById('statTotal').textContent = panels.length;
-    const today = new Date().toLocaleDateString('ar-SA');
-    document.getElementById('statToday').textContent = panels.filter(p => p.date === today).length;
-    document.getElementById('statDuplicates').textContent = duplicateSerials.size;
-    document.getElementById('statActive').textContent = panels.filter(p => p.status === 'نشط').length;
+function projectPanels() {
+    if (!currentProject) return panels;
+    const name = (currentProject.name || '').trim();
+    return panels.filter(p => (p.project || '').trim() === name);
 }
+function updateStats() {
+    const scoped = projectPanels();
+    document.getElementById('statTotal').textContent = scoped.length;
+    const today = new Date().toLocaleDateString('ar-SA');
+    document.getElementById('statToday').textContent = scoped.filter(p => p.date === today).length;
+    const scopedSerials = new Set(scoped.map(p => (p.serial || '').trim().toLowerCase()));
+    let dupCount = 0;
+    duplicateSerials.forEach(s => { if (scopedSerials.has(String(s).trim().toLowerCase())) dupCount++; });
+    document.getElementById('statDuplicates').textContent = currentProject ? dupCount : duplicateSerials.size;
+    document.getElementById('statActive').textContent = scoped.filter(p => p.status === 'نشط').length;
+}
+
 
 // ===================== EXPORT (Customizable Report Templates) =====================
 const REPORT_DEFAULTS = {
