@@ -1568,7 +1568,8 @@ function renderTable() {
     const filterProject = document.getElementById('filterProject').value;
     const filterLocation = document.getElementById('filterLocation').value;
 
-    let filtered = panels.filter(p => {
+    const scopedPanels = (typeof projectPanels === 'function') ? projectPanels() : panels;
+    let filtered = scopedPanels.filter(p => {
         if (search) {
             const searchable = [p.serial, p.model, p.customer, p.project, p.location, p.notes].join(' ').toLowerCase();
             if (!searchable.includes(search)) return false;
