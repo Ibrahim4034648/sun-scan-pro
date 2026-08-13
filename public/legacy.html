@@ -945,20 +945,12 @@ function openProject(id) {
     localStorage.setItem('solarCurrentProject_v1', p.id);
     document.getElementById('apbName').textContent = p.name;
     document.getElementById('apbMeta').textContent = `العميل: ${p.customer || '—'} · بدأ: ${p.date || '—'}`;
-    // scope filter to this project
+    // the table itself is scoped to the open project; clear any stale project filter
     const fp = document.getElementById('filterProject');
-    if (fp) {
-        // ensure option exists, then select
-        let exists = Array.from(fp.options).some(o => o.value === p.name);
-        if (!exists) { const o = document.createElement('option'); o.value = p.name; o.textContent = p.name; fp.appendChild(o); }
-        fp.value = p.name;
-    }
+    if (fp) fp.value = '';
     showMainView();
-    updateStats();
-    renderTable();
     updateFilters();
-    // re-apply project filter after updateFilters rebuilt the select
-    if (fp) fp.value = p.name;
+    updateStats();
     renderTable();
 }
 
@@ -1568,7 +1560,8 @@ function renderTable() {
     const filterProject = document.getElementById('filterProject').value;
     const filterLocation = document.getElementById('filterLocation').value;
 
-    let filtered = panels.filter(p => {
+    const scopedPanels = (typeof projectPanels === 'function') ? projectPanels() : panels;
+    let filtered = scopedPanels.filter(p => {
         if (search) {
             const searchable = [p.serial, p.model, p.customer, p.project, p.location, p.notes].join(' ').toLowerCase();
             if (!searchable.includes(search)) return false;
