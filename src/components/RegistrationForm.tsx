@@ -79,14 +79,14 @@ export function RegistrationForm({ serialFromScan, onClearScan, existing, onAdd 
   };
 
   const field = (k: keyof Draft, label: string, type = "text", extra?: React.ReactNode) => {
-    const err = (errors as any)[k];
+    const err = (errors as Partial<Record<keyof Draft, string>>)[k];
     const show = touched[k] && err;
     return (
       <label className="block">
         <span className="text-xs font-medium text-muted-foreground mb-1.5 block">{label}</span>
         <input
           type={type}
-          value={form[k] as any}
+          value={form[k] as string | number}
           onChange={(e) =>
             setForm({ ...form, [k]: type === "number" ? Number(e.target.value) : e.target.value })
           }

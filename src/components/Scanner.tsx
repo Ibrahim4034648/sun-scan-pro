@@ -74,11 +74,14 @@ export function Scanner({ onScan, continuous = true }: Props) {
             setCameraId((rear ?? vids[0]).id || null);
           }
         }
-      } catch {}
+      } catch {
+        // device enumeration unsupported — fall back to facingMode
+      }
       stream.getTracks().forEach((t) => t.stop());
       return true;
-    } catch (e: any) {
-      const name = e?.name || "";
+    } catch (e) {
+      const err = e as { name?: string; message?: string };
+      const name = err.name || "";
       if (name === "NotAllowedError" || name === "PermissionDeniedError") {
         setError("تم رفض إذن الكاميرا. فعّله من إعدادات المتصفح ثم أعد المحاولة.");
       } else if (name === "NotFoundError" || name === "OverconstrainedError") {
@@ -86,7 +89,7 @@ export function Scanner({ onScan, continuous = true }: Props) {
       } else if (name === "NotReadableError") {
         setError("الكاميرا مستخدمة من تطبيق آخر. أغلق التطبيقات الأخرى وحاول مجدداً.");
       } else {
-        setError(e?.message || "تعذّر الوصول إلى الكاميرا.");
+        setError(err.message || "تعذّر الوصول إلى الكاميرا.");
       }
       return false;
     }
@@ -95,7 +98,10 @@ export function Scanner({ onScan, continuous = true }: Props) {
   const beep = () => {
     if (!sound) return;
     try {
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const ctx = new (
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+      )();
       const o = ctx.createOscillator();
       const g = ctx.createGain();
       o.frequency.value = 880;
@@ -105,7 +111,9 @@ export function Scanner({ onScan, continuous = true }: Props) {
       g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
       o.start();
       o.stop(ctx.currentTime + 0.15);
-    } catch {}
+    } catch {
+      // WebAudio blocked before user gesture — beep is optional
+    }
     if ("vibrate" in navigator) navigator.vibrate(60);
   };
 
@@ -131,7 +139,9 @@ export function Scanner({ onScan, continuous = true }: Props) {
       });
       scannerRef.current = html5;
       // Prefer deviceId when known; fall back to facingMode for iOS Safari first-run.
-      const cameraSource: any = cameraId ? cameraId : { facingMode: { ideal: "environment" } };
+      const cameraSource: string | { facingMode: { ideal: string } } = cameraId
+        ? cameraId
+        : { facingMode: { ideal: "environment" } };
       await html5.start(
         cameraSource,
         { fps: 10, qrbox: { width: 260, height: 260 }, aspectRatio: 1 },
@@ -146,13 +156,14 @@ export function Scanner({ onScan, continuous = true }: Props) {
         () => {},
       );
       setStatus("scanning");
-    } catch (e: any) {
+    } catch (e) {
       setStatus("error");
-      const name = e?.name || "";
+      const err = e as { name?: string; message?: string };
+      const name = err.name || "";
       if (name === "NotAllowedError") setError("تم رفض إذن الكاميرا. فعّله من إعدادات المتصفح.");
       else if (name === "NotFoundError") setError("لا توجد كاميرا على هذا الجهاز.");
       else if (name === "NotReadableError") setError("الكاميرا مستخدمة من تطبيق آخر.");
-      else setError(e?.message ?? "فشل تشغيل الكاميرا");
+      else setError(err.message ?? "فشل تشغيل الكاميرا");
     }
   };
 
@@ -163,17 +174,23 @@ export function Scanner({ onScan, continuous = true }: Props) {
       try {
         await s.stop();
         await s.clear();
-      } catch {}
+      } catch {
+        // scanner already torn down
+      }
     }
     setStatus("idle");
     setTorch(false);
   };
 
   const toggleTorch = async () => {
-    const s = scannerRef.current as any;
+    const s = scannerRef.current as unknown as {
+      applyVideoConstraints: (c: MediaTrackConstraints) => Promise<void>;
+    } | null;
     if (!s) return;
     try {
-      await s.applyVideoConstraints({ advanced: [{ torch: !torch }] });
+      await s.applyVideoConstraints({
+        advanced: [{ torch: !torch }],
+      } as MediaTrackConstraints);
       setTorch(!torch);
     } catch {
       setError("الفلاش غير مدعوم على هذا الجهاز");

@@ -51,8 +51,8 @@ function AuthPage() {
         if (error) throw error;
       }
       navigate({ to: "/welcome" });
-    } catch (err: any) {
-      const msg = err?.message || "حدث خطأ";
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "حدث خطأ";
       if (msg.includes("Invalid login")) setError("بيانات الدخول غير صحيحة");
       else if (msg.includes("already registered") || msg.includes("already exists"))
         setError("هذا البريد مسجل مسبقاً — سجّل الدخول بدلاً من ذلك");

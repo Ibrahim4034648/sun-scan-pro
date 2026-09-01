@@ -46,11 +46,15 @@ export function loadDraft<T>(): T | null {
 export function saveDraft<T>(draft: T) {
   try {
     localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-  } catch {}
+  } catch {
+    // storage unavailable (private mode / quota) — draft is non-critical
+  }
 }
 
 export function clearDraft() {
   try {
     localStorage.removeItem(DRAFT_KEY);
-  } catch {}
+  } catch {
+    // storage unavailable — nothing to clear
+  }
 }
