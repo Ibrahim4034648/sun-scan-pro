@@ -1,0 +1,2953 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#FF8A00">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>SPWMS — Solar Panel Warranty Management System</title>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        :root {
+            --bg: #f4f5f7; --card-bg: #ffffff; --text-primary: #0F141B; --text-secondary: #5b6470;
+            --border: #e5e7eb; --solar-orange: #FF8A00; --solar-orange-light: #fff3e0; --solar-orange-dark: #e57a00;
+            --brand-dark: #0F141B; --accent-blue: #3B82F6; --success: #22C55E; --success-light: #dcfce7;
+            --danger: #EF4444; --danger-light: #fee2e2; --warning: #F59E0B; --warning-light: #fef3c7;
+            --shadow-sm: 0 1px 2px rgba(15,20,27,0.06); --shadow-md: 0 4px 6px rgba(15,20,27,0.08);
+            --shadow-lg: 0 10px 15px rgba(15,20,27,0.10); --radius: 12px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        body {
+            font-family: 'Cairo', 'Space Grotesk', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg); color: var(--text-primary); line-height: 1.5; min-height: 100vh;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 12px; padding-bottom: 80px; }
+
+        .header {
+            background: var(--card-bg); border-bottom: 1px solid var(--border);
+            padding: 12px 16px; display: flex; align-items: center; justify-content: space-between;
+            position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow-sm);
+        }
+        .header-left { display: flex; align-items: center; gap: 10px; }
+        .logo-icon {
+            width: 42px; height: 42px; background: var(--brand-dark);
+            border-radius: 10px; display: flex; align-items: center; justify-content: center;
+            color: white; flex-shrink: 0; box-shadow: 0 2px 6px rgba(255,138,0,0.25);
+        }
+        .header-title, .section-title { font-family: 'Space Grotesk','Cairo',sans-serif; letter-spacing: 0.2px; }
+        .header-title { font-size: 15px; font-weight: 800; }
+        .header-subtitle { font-size: 11px; color: var(--text-secondary); }
+        .header-actions { display: flex; gap: 6px; }
+
+        .stats-grid {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 12px 0;
+        }
+        @media (max-width: 640px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+        .stat-card {
+            background: var(--card-bg); border-radius: var(--radius); padding: 14px;
+            border: 1px solid var(--border); box-shadow: var(--shadow-sm);
+            display: flex; align-items: center; gap: 10px;
+        }
+        .stat-icon {
+            width: 40px; height: 40px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;
+        }
+        .stat-icon.orange { background: var(--solar-orange-light); color: var(--solar-orange); }
+        .stat-icon.blue { background: var(--accent-blue-light); color: var(--accent-blue); }
+        .stat-icon.green { background: var(--success-light); color: var(--success); }
+        .stat-icon.red { background: var(--danger-light); color: var(--danger); }
+        .stat-info h3 { font-size: 20px; font-weight: 800; }
+        .stat-info p { font-size: 11px; color: var(--text-secondary); font-weight: 600; }
+
+        .scanner-section, .form-section, .table-section {
+            background: var(--card-bg); border-radius: var(--radius);
+            border: 1px solid var(--border); padding: 16px;
+            box-shadow: var(--shadow-sm); margin-bottom: 12px;
+        }
+        .section-title {
+            font-size: 13px; font-weight: 700; margin-bottom: 12px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .scanner-wrapper {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+        }
+        @media (max-width: 768px) { .scanner-wrapper { grid-template-columns: 1fr; } }
+
+        .scanner-box {
+            background: #0f0f1a; border-radius: var(--radius);
+            overflow: hidden; position: relative; min-height: 280px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .scanner-placeholder {
+            color: #6b7280; text-align: center; padding: 30px;
+        }
+        .scanner-placeholder i { font-size: 40px; margin-bottom: 10px; display: block; color: #374151; }
+        .scanner-placeholder p { font-size: 14px; }
+        .scanner-placeholder p.small { font-size: 12px; margin-top: 4px; color: #4b5563; }
+
+        .scan-frame {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 260px; height: 160px;
+            border: 2px solid rgba(255,138,0,0.6);
+            border-radius: 8px; pointer-events: none; z-index: 5;
+        }
+        .scan-frame::before, .scan-frame::after {
+            content: ''; position: absolute; width: 20px; height: 20px;
+            border-color: var(--solar-orange); border-style: solid;
+        }
+        .scan-frame::before { top: -2px; left: -2px; border-width: 4px 0 0 4px; }
+        .scan-frame::after { bottom: -2px; right: -2px; border-width: 0 4px 4px 0; }
+        .scan-frame-label {
+            position: absolute; bottom: -28px; left: 50%;
+            transform: translateX(-50%); color: var(--solar-orange);
+            font-size: 11px; font-weight: 700; white-space: nowrap;
+            background: rgba(0,0,0,0.6); padding: 2px 10px; border-radius: 10px;
+        }
+        .scan-laser {
+            position: absolute; top: 0; left: 0; right: 0;
+            height: 2px; background: var(--solar-orange);
+            box-shadow: 0 0 8px var(--solar-orange);
+            animation: laserScan 2s linear infinite;
+            opacity: 0.7; pointer-events: none;
+        }
+        @keyframes laserScan {
+            0% { top: 0; opacity: 0; } 10% { opacity: 0.7; }
+            90% { opacity: 0.7; } 100% { top: 100%; opacity: 0; }
+        }
+        .scan-status-bar {
+            position: absolute; top: 10px; right: 10px;
+            background: rgba(0,0,0,0.7); color: white;
+            padding: 4px 12px; border-radius: 20px;
+            font-size: 11px; font-weight: 600;
+            display: flex; align-items: center; gap: 6px; z-index: 10;
+        }
+        .scan-status-bar .dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--success); animation: pulse 1.5s infinite;
+        }
+        .scan-status-bar .dot.error { background: var(--danger); animation: none; }
+        .scan-status-bar .dot.warning { background: var(--warning); animation: none; }
+        .scan-status-bar .dot.idle { background: #6b7280; animation: none; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+        .scanner-controls { display: flex; flex-direction: column; gap: 10px; }
+        .manual-input-group { display: flex; gap: 8px; }
+        .manual-input-group input {
+            flex: 1; padding: 12px 14px; border: 2px solid var(--border);
+            border-radius: 10px; font-size: 16px; outline: none;
+            font-family: 'Courier New', monospace; font-weight: 700;
+            transition: all 0.2s; background: var(--card-bg);
+        }
+        .manual-input-group input:focus { border-color: var(--solar-orange); }
+        .manual-input-group input.scan-success { border-color: var(--success); background: var(--success-light); }
+        .manual-input-group input.scan-error { border-color: var(--danger); background: var(--danger-light); }
+        .scanner-options { display: flex; flex-wrap: wrap; gap: 6px; }
+        .scanner-options label {
+            display: flex; align-items: center; gap: 5px;
+            font-size: 12px; color: var(--text-secondary); cursor: pointer;
+            padding: 6px 10px; background: var(--bg); border-radius: 8px; border: 1px solid var(--border);
+        }
+        .scanner-options input[type="checkbox"] { accent-color: var(--solar-orange); width: 16px; height: 16px; }
+        .camera-select {
+            padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px;
+            font-size: 13px; background: var(--card-bg); outline: none; width: 100%;
+        }
+        .scanner-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center;
+            gap: 6px; padding: 10px 16px; border-radius: 10px; border: none;
+            font-size: 13px; font-weight: 700; cursor: pointer;
+            transition: all 0.2s; white-space: nowrap; min-height: 44px;
+        }
+        .btn-primary { background: var(--solar-orange); color: white; }
+        .btn-primary:hover { background: var(--solar-orange-dark); }
+        .btn-secondary { background: var(--bg); color: var(--text-primary); border: 1px solid var(--border); }
+        .btn-secondary:hover { background: var(--border); }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-danger:hover { background: #dc2626; }
+        .btn-blue { background: var(--accent-blue); color: white; }
+        .btn-blue:hover { background: #0284c7; }
+        .btn-dark { background: var(--brand-dark); color: white; }
+        .btn-dark:hover { background: #1a212c; }
+        .btn-sm { padding: 8px 12px; font-size: 12px; min-height: 36px; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .form-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;
+        }
+        .form-group label {
+            display: block; font-size: 11px; font-weight: 700;
+            color: var(--text-secondary); margin-bottom: 5px;
+        }
+        .form-group select, .form-group input, .form-group textarea {
+            width: 100%; padding: 10px 12px; border: 1px solid var(--border);
+            border-radius: 10px; font-size: 14px; background: var(--card-bg);
+            outline: none; transition: all 0.2s;
+        }
+        .form-group select:focus, .form-group input:focus, .form-group textarea:focus {
+            border-color: var(--solar-orange); box-shadow: 0 0 0 3px rgba(255,138,0,0.1);
+        }
+        .form-group textarea { resize: vertical; min-height: 50px; }
+        .form-group .new-input { margin-top: 6px; display: none; }
+        .new-row { display: none; gap: 6px; margin-top: 6px; }
+        .new-row.show { display: flex; }
+        .new-row .new-input { display: block; margin-top: 0; flex: 1; }
+        .new-row .save-new { background: linear-gradient(135deg,#FF8A00,#e57a00); color:#fff; border:none; padding:0 14px; border-radius:10px; font-weight:700; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; white-space:nowrap; }
+        .new-row .save-new:hover { filter: brightness(1.08); }
+        .new-row .cancel-new { background:#f3f4f6; color:#374151; border:1px solid #e5e7eb; padding:0 12px; border-radius:10px; cursor:pointer; }
+        .add-customer-trigger { width:100%; margin-top:8px; min-height:42px; border:1px dashed var(--solar-orange); background:rgba(255,138,0,.08); color:var(--solar-orange-dark); border-radius:10px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:7px; }
+
+        /* ========= Projects Screen ========= */
+        #projectsScreen { display:none; max-width:1200px; margin:0 auto; padding:16px; padding-bottom:40px; }
+        body.view-projects #projectsScreen { display:block; }
+        body.view-projects .container, body.view-projects .footer-bar { display:none !important; }
+        body.view-main #activeProjectBar { display:flex; }
+        .projects-header { display:flex; align-items:center; justify-content:space-between; margin:8px 0 18px; gap:12px; flex-wrap:wrap; }
+        .projects-header h2 { font-size:20px; font-weight:800; display:flex; align-items:center; gap:10px; }
+        .projects-header h2 i { color:var(--solar-orange); }
+        .projects-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(240px,1fr)); gap:14px; }
+        .project-card {
+            background:var(--card-bg); border:1px solid var(--border); border-radius:16px;
+            padding:18px; box-shadow:var(--shadow-sm); cursor:pointer;
+            transition:transform .15s, box-shadow .15s, border-color .15s;
+            position:relative; display:flex; flex-direction:column; gap:10px; min-height:150px;
+            border-top:4px solid var(--solar-orange);
+        }
+        .project-card:hover { transform:translateY(-2px); box-shadow:var(--shadow-md); border-color:var(--solar-orange); }
+        .project-card .pc-icon {
+            width:44px; height:44px; border-radius:12px;
+            background:linear-gradient(135deg,var(--solar-orange),var(--solar-orange-dark));
+            color:#fff; display:flex; align-items:center; justify-content:center; font-size:20px;
+        }
+        .project-card .pc-name { font-size:16px; font-weight:800; color:var(--text-primary); line-height:1.3; }
+        .project-card .pc-meta { font-size:12px; color:var(--text-secondary); display:flex; flex-direction:column; gap:4px; }
+        .project-card .pc-meta span i { color:var(--solar-orange); margin-left:4px; width:12px; }
+        .project-card .pc-footer { display:flex; justify-content:space-between; align-items:center; margin-top:auto; padding-top:10px; border-top:1px dashed var(--border); }
+        .project-card .pc-count { font-size:11px; color:var(--text-secondary); font-weight:700; }
+        .project-card .pc-count b { color:var(--solar-orange); font-size:14px; }
+        .project-card .pc-del {
+            background:transparent; border:none; color:var(--danger); cursor:pointer;
+            width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center;
+            opacity:0; transition:opacity .15s, background .15s;
+        }
+        .project-card:hover .pc-del { opacity:1; }
+        .project-card .pc-del:hover { background:var(--danger-light); }
+        .project-card-add {
+            border:2px dashed var(--border); background:transparent; box-shadow:none;
+            align-items:center; justify-content:center; text-align:center; color:var(--solar-orange);
+            font-weight:800; border-top:2px dashed var(--border);
+        }
+        .project-card-add:hover { border-color:var(--solar-orange); background:var(--solar-orange-light); }
+        .project-card-add i { font-size:32px; }
+        .projects-empty { text-align:center; padding:60px 20px; color:var(--text-secondary); }
+        .projects-empty i { font-size:56px; opacity:.25; display:block; margin-bottom:12px; color:var(--solar-orange); }
+
+        /* ========= Modal ========= */
+        .modal-overlay {
+            position:fixed; inset:0; background:rgba(15,15,26,0.55); backdrop-filter:blur(4px);
+            display:none; align-items:center; justify-content:center; z-index:500; padding:16px;
+        }
+        .modal-overlay.show { display:flex; }
+        .modal {
+            background:var(--card-bg); border-radius:18px; width:100%; max-width:460px;
+            box-shadow:0 20px 50px rgba(0,0,0,0.3); overflow:hidden; animation:modalIn .2s ease;
+        }
+        @keyframes modalIn { from { transform:translateY(20px); opacity:0; } to { transform:translateY(0); opacity:1; } }
+        .modal-header {
+            padding:18px 20px; background:linear-gradient(135deg,var(--solar-orange),var(--solar-orange-dark));
+            color:#fff; display:flex; align-items:center; justify-content:space-between;
+        }
+        .modal-header h3 { font-size:16px; font-weight:800; display:flex; align-items:center; gap:10px; }
+        .modal-close { background:rgba(255,255,255,0.2); border:none; color:#fff; width:30px; height:30px; border-radius:8px; cursor:pointer; }
+        .modal-body { padding:20px; display:flex; flex-direction:column; gap:14px; }
+        .modal-footer { padding:14px 20px; border-top:1px solid var(--border); display:flex; gap:8px; justify-content:flex-end; }
+
+        /* ========= Active project bar ========= */
+        #activeProjectBar {
+            display:none; align-items:center; gap:12px; background:linear-gradient(135deg,#fff7ed,#ffedd5);
+            border:1px solid #fdba74; border-radius:14px; padding:12px 14px; margin-bottom:12px;
+        }
+        #activeProjectBar .apb-icon { width:38px; height:38px; border-radius:10px; background:var(--solar-orange); color:#fff; display:flex; align-items:center; justify-content:center; }
+        #activeProjectBar .apb-info { flex:1; min-width:0; }
+        #activeProjectBar .apb-name { font-size:15px; font-weight:800; color:var(--brand-dark); font-family:'Space Grotesk','Cairo',sans-serif; }
+        #activeProjectBar .apb-meta { font-size:11px; color:#6b7280; margin-top:2px; }
+        #activeProjectBar .apb-back { background:#fff; border:1px solid var(--border); color:var(--text-primary); padding:8px 14px; border-radius:10px; font-weight:700; cursor:pointer; font-size:12px; display:flex; align-items:center; gap:6px; }
+        #activeProjectBar .apb-back:hover { background:var(--bg); }
+
+
+        .table-toolbar {
+            display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+            margin-bottom: 12px; justify-content: space-between;
+        }
+        .search-box {
+            position: relative; flex: 1; min-width: 180px; max-width: 350px;
+        }
+        .search-box i {
+            position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+            color: var(--text-secondary); font-size: 13px;
+        }
+        .search-box input {
+            width: 100%; padding: 10px 12px 10px 36px;
+            border: 1px solid var(--border); border-radius: 10px;
+            font-size: 13px; outline: none; background: var(--card-bg);
+        }
+        .search-box input:focus { border-color: var(--solar-orange); }
+        .filter-group { display: flex; gap: 6px; flex-wrap: wrap; }
+        .filter-group select {
+            padding: 8px 10px; border: 1px solid var(--border);
+            border-radius: 8px; font-size: 12px; background: var(--card-bg); outline: none;
+        }
+        .table-container { overflow-x: auto; border-radius: 10px; border: 1px solid var(--border); }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        thead { background: var(--bg); }
+        th {
+            padding: 10px 12px; text-align: right; font-weight: 700;
+            color: var(--text-secondary); font-size: 10px;
+            border-bottom: 2px solid var(--border); cursor: pointer;
+            user-select: none; white-space: nowrap;
+        }
+        th:hover { color: var(--solar-orange); }
+        th .sort-icon { margin-right: 4px; font-size: 9px; opacity: 0.5; }
+        th.sorted .sort-icon { opacity: 1; color: var(--solar-orange); }
+        td {
+            padding: 10px 12px; border-bottom: 1px solid var(--border);
+            color: var(--text-primary); font-weight: 500;
+        }
+        tbody tr { transition: background 0.15s; }
+        tbody tr:hover { background: var(--bg); }
+        tbody tr.new-row { animation: highlightRow 2s ease forwards; }
+        tbody tr.duplicate { background: var(--danger-light); }
+        @keyframes highlightRow { 0%{background:var(--success-light)} 100%{background:transparent} }
+        .serial-cell { font-family: 'Courier New', monospace; font-weight: 700; font-size: 13px; }
+        .action-btn {
+            width: 28px; height: 28px; border-radius: 6px;
+            border: none; cursor: pointer; display: flex;
+            align-items: center; justify-content: center;
+            font-size: 11px; background: var(--danger-light); color: var(--danger);
+        }
+        .action-btn:hover { background: var(--danger); color: white; }
+        .empty-state {
+            text-align: center; padding: 50px 20px; color: var(--text-secondary); font-size: 13px;
+        }
+        .empty-state i { font-size: 40px; margin-bottom: 10px; display: block; opacity: 0.3; }
+
+        .toast-container {
+            position: fixed; top: 70px; left: 16px; z-index: 1000;
+            display: flex; flex-direction: column; gap: 8px;
+            max-width: calc(100vw - 32px);
+        }
+        .toast {
+            background: var(--card-bg); border-radius: var(--radius);
+            padding: 12px 16px; box-shadow: var(--shadow-lg);
+            border-right: 4px solid var(--success); display: flex;
+            align-items: center; gap: 10px; min-width: 260px;
+            animation: slideIn 0.3s ease, fadeOut 0.3s ease 2.7s forwards;
+            font-size: 13px;
+        }
+        .toast.error { border-right-color: var(--danger); }
+        .toast.warning { border-right-color: var(--warning); }
+        .toast i { font-size: 18px; flex-shrink: 0; }
+        @keyframes slideIn { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes fadeOut { to { opacity: 0; transform: translateX(-100%); } }
+
+        .footer-bar {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: var(--card-bg); border-top: 1px solid var(--border);
+            padding: 10px 16px; display: flex; justify-content: space-between;
+            align-items: center; z-index: 90; box-shadow: var(--shadow-sm);
+            padding-bottom: max(10px, env(safe-area-inset-bottom));
+        }
+        .footer-left { font-size: 12px; color: var(--text-secondary); }
+        .footer-right { display: flex; gap: 6px; }
+
+        .camera-error {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.85); color: white;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            padding: 30px; text-align: center; z-index: 20;
+        }
+        .camera-error i { font-size: 48px; color: var(--danger); margin-bottom: 16px; }
+        .camera-error h3 { font-size: 16px; margin-bottom: 8px; }
+        .camera-error p { font-size: 13px; color: #9ca3af; margin-bottom: 16px; }
+
+        @media (max-width: 640px) {
+            .header { padding: 10px 12px; }
+            .header-title { font-size: 14px; }
+            .stats-grid { gap: 8px; }
+            .stat-card { padding: 12px; gap: 8px; }
+            .stat-icon { width: 36px; height: 36px; font-size: 16px; }
+            .stat-info h3 { font-size: 18px; }
+            .scanner-section, .form-section, .table-section { padding: 12px; }
+            .table-toolbar { flex-direction: column; align-items: stretch; }
+            .search-box { max-width: none; }
+            .filter-group { width: 100%; }
+            .filter-group select { flex: 1; }
+            .footer-bar { padding: 8px 12px; flex-wrap: wrap; gap: 6px; }
+            .footer-right { width: 100%; justify-content: stretch; }
+            .footer-right .btn { flex: 1; }
+            .scanner-actions .btn { flex: 1; }
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script>
+    // Auth gate: if visitor hits /legacy.html directly without a Supabase session, bounce to /auth
+    (function(){
+      try {
+        var raw = localStorage.getItem('sb-ejsxhgnopgeloyqmeinq-auth-token');
+        var ok = false;
+        if (raw) {
+          var s = JSON.parse(raw);
+          var exp = s && (s.expires_at || (s.currentSession && s.currentSession.expires_at));
+          if (exp && exp * 1000 > Date.now()) ok = true;
+        }
+        if (!ok) { window.location.replace('/auth'); document.documentElement.style.display='none'; }
+      } catch(e) { window.location.replace('/auth'); }
+    })();
+    </script>
+</head>
+<body class="view-projects">
+<div clas
+    <!-- Permission Request Overlay -->
+    <div id="permissionOverlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:linear-gradient(135deg,#0F141B 0%,#1a212c 100%);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;text-align:center;color:white;">
+        <div style="width:80px;height:80px;background:linear-gradient(135deg,#FF8A00,#e57a00);border-radius:20px;display:flex;align-items:center;justify-content:center;margin-bottom:24px;font-size:36px;">☀</div>
+        <h1 style="font-size:22px;font-weight:800;margin-bottom:8px;">نظام إدارة ضمان الألواح الشمسية</h1>
+        <p style="font-size:14px;color:#9ca3af;margin-bottom:32px;max-width:320px;">التطبيق يحتاج إلى الوصول للكاميرا لمسح الباركود والميكروفون للتأكد من عمل الجهاز</p>
+
+        <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:20px;margin-bottom:24px;max-width:360px;width:100%;border:1px solid rgba(255,255,255,0.1);">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+                <div style="width:40px;height:40px;background:rgba(255,138,0,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#FF8A00;font-size:18px;"><i class="fas fa-camera"></i></div>
+                <div style="text-align:right;flex:1;">
+                    <div style="font-size:14px;font-weight:700;">الكاميرا</div>
+                    <div style="font-size:12px;color:#9ca3af;">لقراءة الباركود على الألواح الشمسية</div>
+                </div>
+                <div id="permCameraStatus" style="font-size:12px;color:#f59e0b;font-weight:600;">مطلوب</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+                <div style="width:40px;height:40px;background:rgba(16,185,129,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#10b981;font-size:18px;"><i class="fas fa-hdd"></i></div>
+                <div style="text-align:right;flex:1;">
+                    <div style="font-size:14px;font-weight:700;">التخزين المحلي</div>
+                    <div style="font-size:12px;color:#9ca3af;">لحفظ البيانات على الجهاز</div>
+                </div>
+                <div id="permStorageStatus" style="font-size:12px;color:#f59e0b;font-weight:600;">مطلوب</div>
+            </div>
+        </div>
+
+        <button id="grantBtn" onclick="requestPermissions()" style="background:#FF8A00;color:white;border:none;padding:14px 40px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;transition:all 0.2s;width:100%;max-width:300px;margin-bottom:12px;">
+            <i class="fas fa-check-circle"></i> السماح بالوصول
+        </button>
+        <button onclick="skipPermissions()" style="background:transparent;color:#9ca3af;border:none;padding:10px;font-size:13px;cursor:pointer;">
+            تخطي (وضع الإدخال اليدوي فقط)
+        </button>
+        <p id="permError" style="color:#ef4444;font-size:12px;margin-top:12px;display:none;"></p>
+    </div>
+s="header">
+    <div class="header-left">
+        <div class="logo-icon" aria-label="SPWMS">
+            <svg viewBox="0 0 48 56" width="26" height="30" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M24 2 L44 10 V28 C44 40 35 50 24 54 C13 50 4 40 4 28 V10 Z" fill="#0F141B"/>
+                <g transform="translate(11,12)">
+                    <rect x="0" y="0" width="26" height="20" rx="2" fill="#ffffff"/>
+                    <line x1="8.6" y1="0" x2="8.6" y2="20" stroke="#0F141B" stroke-width="1"/>
+                    <line x1="17.3" y1="0" x2="17.3" y2="20" stroke="#0F141B" stroke-width="1"/>
+                    <line x1="0" y1="6.6" x2="26" y2="6.6" stroke="#0F141B" stroke-width="1"/>
+                    <line x1="0" y1="13.3" x2="26" y2="13.3" stroke="#0F141B" stroke-width="1"/>
+                </g>
+                <path d="M22 34 L30 34 L25 44 L33 44 L18 56 L23 46 L17 46 Z" fill="#FF8A00"/>
+            </svg>
+        </div>
+        <div>
+            <div class="header-title">SPWMS <span style="color:var(--solar-orange)">·</span> ضمان الألواح الشمسية</div>
+            <div class="header-subtitle">Scan · Track · Protect · Manage</div>
+        </div>
+    </div>
+    <div class="header-actions">
+        <input type="file" id="importFile" accept=".json" style="display:none" onchange="restoreData(event)">
+    </div>
+</div>
+
+<!-- ===== Projects Screen ===== -->
+<div id="projectsScreen">
+    <div class="projects-header">
+        <h2><i class="fas fa-folder-open"></i> المشاريع</h2>
+        <button class="btn btn-primary" onclick="openProjectModal()"><i class="fas fa-plus"></i> إضافة مشروع جديد</button>
+    </div>
+    <div id="projectsGrid" class="projects-grid"></div>
+</div>
+
+<!-- ===== New Project Modal ===== -->
+<div id="projectModal" class="modal-overlay" onclick="if(event.target===this)closeProjectModal()">
+    <div class="modal">
+        <div class="modal-header">
+            <h3><i class="fas fa-folder-plus"></i> <span id="projectModalTitle">إضافة مشروع جديد</span></h3>
+            <button type="button" class="modal-close" onclick="closeProjectModal()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>اسم المشروع *</label>
+                <input type="text" id="pmName" placeholder="مثال: مشروع القويرة">
+            </div>
+            <div class="form-group">
+                <label>العميل *</label>
+                <select id="pmCustomer" onchange="handleSelectChange('pmCustomer','pmNewCustomerInput','pmNewCustomerRow')">
+                    <option value="">-- اختر --</option>
+                    <option value="__new__">+ إضافة عميل جديد</option>
+                </select>
+                <button type="button" class="add-customer-trigger" onclick="openModalNewCustomer()"><i class="fas fa-user-plus"></i> إضافة عميل جديد</button>
+                <div id="pmNewCustomerRow" class="new-row">
+                    <input type="text" id="pmNewCustomerInput" class="new-input" placeholder="اسم العميل الجديد" onkeydown="if(event.key==='Enter'){event.preventDefault();saveModalNewCustomer();}">
+                    <button type="button" class="save-new" onclick="saveModalNewCustomer()"><i class="fas fa-check"></i> حفظ</button>
+                    <button type="button" class="cancel-new" onclick="cancelModalNewCustomer()" title="إلغاء"><i class="fas fa-times"></i></button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>تاريخ بدء المشروع *</label>
+                <input type="date" id="pmDate">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeProjectModal()">إلغاء</button>
+            <button class="btn btn-primary" onclick="saveProject()"><i class="fas fa-save"></i> حفظ</button>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Active project bar -->
+    <div id="activeProjectBar">
+        <div class="apb-icon"><i class="fas fa-folder-open"></i></div>
+        <div class="apb-info">
+            <div class="apb-name" id="apbName">—</div>
+            <div class="apb-meta" id="apbMeta">—</div>
+        </div>
+        <button class="apb-back" onclick="exitToProjects()"><i class="fas fa-arrow-right"></i> المشاريع</button>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon orange"><i class="fas fa-solar-panel"></i></div>
+            <div class="stat-info"><h3 id="statTotal">0</h3><p>إجمالي الألواح</p></div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon blue"><i class="fas fa-calendar-day"></i></div>
+            <div class="stat-info"><h3 id="statToday">0</h3><p>المسجلة اليوم</p></div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon red"><i class="fas fa-exclamation-triangle"></i></div>
+            <div class="stat-info"><h3 id="statDuplicates">0</h3><p>مكررة</p></div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon green"><i class="fas fa-shield-alt"></i></div>
+            <div class="stat-info"><h3 id="statActive">0</h3><p>ضمانات نشطة</p></div>
+        </div>
+    </div>
+
+    <div class="scanner-section">
+        <div class="section-title"><i class="fas fa-barcode"></i> ماسح الباركود / QR</div>
+        <div class="scanner-wrapper">
+            <div class="scanner-box" id="scannerBox">
+                <div class="scanner-placeholder" id="scannerPlaceholder">
+                    <i class="fas fa-camera"></i>
+                    <p>الماسح جاهز</p>
+                    <p class="small">اختر الكاميرا واضغط تشغيل</p>
+                </div>
+                <div class="scan-frame" id="scanFrame" style="display:none">
+                    <div class="scan-laser"></div>
+                    <div class="scan-frame-label">وجّه الباركود هنا</div>
+                </div>
+                <div class="scan-status-bar" id="scanStatusBar" style="display:none">
+                    <span class="dot" id="statusDot"></span>
+                    <span id="statusText">جاري التشغيل...</span>
+                </div>
+            </div>
+            <div class="scanner-controls">
+                <div class="manual-input-group">
+                    <input type="text" id="manualSerial" placeholder="الرقم التسلسلي..."
+                        autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+                    <button class="btn btn-primary" onclick="manualScan()" id="addBtn"><i class="fas fa-plus"></i> إضافة</button>
+                </div>
+                <select class="camera-select" id="cameraSelect"><option value="">اختر الكاميرا...</option></select>
+                <div class="scanner-options">
+                    <label><input type="checkbox" id="continuousScan" checked> مسح متواصل</label>
+                    <label><input type="checkbox" id="soundEnabled" checked> صوت</label>
+                    <label><input type="checkbox" id="vibrateEnabled" checked> اهتزاز</label>
+                </div>
+                <div class="scanner-actions">
+                    <button class="btn btn-primary" id="startBtn" onclick="startScanner()" style="flex:1"><i class="fas fa-play"></i> تشغيل</button>
+                    <button class="btn btn-secondary" id="stopBtn" onclick="stopScanner()" style="flex:1;display:none"><i class="fas fa-stop"></i> إيقاف</button>
+                    <button class="btn btn-dark" id="torchBtn" onclick="toggleTorch()" style="display:none"><i class="fas fa-lightbulb"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-section">
+        <div class="section-title"><i class="fas fa-edit"></i> تفاصيل التركيب</div>
+        <div class="form-grid">
+            <!-- العميل والمشروع تنتقل لشاشة المشاريع وتطبّق تلقائياً -->
+
+            <div class="form-group">
+                <label>الموقع</label>
+                <select id="installLocation" onchange="handleSelectChange('installLocation','newLocationInput','newLocationRow')">
+                    <option value="">-- اختر --</option>
+                    <option value="حقل الألواح" selected>حقل الألواح</option>
+                    <option value="غرفة التحكم">غرفة التحكم</option>
+                    <option value="__new__">+ إضافة جديد</option>
+                </select>
+                <div id="newLocationRow" class="new-row">
+                    <input type="text" id="newLocationInput" class="new-input" placeholder="الموقع الجديد">
+                    <button type="button" class="save-new" onclick="saveNewItem('location')"><i class="fas fa-check"></i> حفظ</button>
+                    <button type="button" class="cancel-new" onclick="cancelNewItem('location')" title="إلغاء"><i class="fas fa-times"></i></button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>موديل اللوح</label>
+                <select id="panelModel" onchange="handleSelectChange('panelModel','newModelInput','newModelRow')">
+                    <option value="">-- اختر --</option>
+                    <option value="__new__">+ إضافة جديد</option>
+                </select>
+                <div id="newModelRow" class="new-row">
+                    <input type="text" id="newModelInput" class="new-input" placeholder="اسم الموديل الجديد">
+                    <button type="button" class="save-new" onclick="saveNewItem('model')"><i class="fas fa-check"></i> حفظ</button>
+                    <button type="button" class="cancel-new" onclick="cancelNewItem('model')" title="إلغاء"><i class="fas fa-times"></i></button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>موقع اللوح في المجموعة (String)</label>
+                <select id="warrantyPeriod">
+                    <option value="St1" selected>St1</option>
+                    <option value="St2">St2</option>
+                    <option value="St3">St3</option>
+                    <option value="St4">St4</option>
+                    <option value="St5">St5</option>
+                    <option value="St6">St6</option>
+                    <option value="St7">St7</option>
+                    <option value="St8">St8</option>
+                    <option value="St9">St9</option>
+                    <option value="St10">St10</option>
+                </select>
+            </div>
+            <div class="form-group" style="grid-column:1/-1">
+                <label>ملاحظات</label>
+                <textarea id="notes" placeholder="ملاحظات إضافية..."></textarea>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-section">
+        <div class="table-toolbar">
+            <h3 class="section-title" style="margin:0"><i class="fas fa-list"></i> الألواح المسجلة</h3>
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchInput" placeholder="بحث في جميع الحقول..." oninput="renderTable()">
+            </div>
+            <div class="filter-group">
+                <select id="filterDate" onchange="renderTable()"><option value="">كل التواريخ</option></select>
+                <select id="filterCustomer" onchange="renderTable()"><option value="">كل العملاء</option></select>
+                <select id="filterProject" onchange="renderTable()"><option value="">كل المشاريع</option></select>
+                <select id="filterLocation" onchange="renderTable()"><option value="">كل المواقع</option></select>
+            </div>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th onclick="sortTable('id')"># <span class="sort-icon"><i class="fas fa-sort"></i></span></th>
+                        <th onclick="sortTable('serial')">التسلسلي <span class="sort-icon"><i class="fas fa-sort"></i></span></th>
+                        <th onclick="sortTable('model')">الموديل <span class="sort-icon"><i class="fas fa-sort"></i></span></th>
+                        <th onclick="sortTable('warranty')">المجموعة (String) <span class="sort-icon"><i class="fas fa-sort"></i></span></th>
+                        <th onclick="sortTable('date')">التاريخ <span class="sort-icon"><i class="fas fa-sort"></i></span></th>
+                        <th onclick="sortTable('location')">الموقع <span class="sort-icon"><i class="fas fa-sort"></i></span></th>
+                        <th onclick="sortTable('project')">المشروع <span class="sort-icon"><i class="fas fa-sort"></i></span></th>
+                        <th onclick="sortTable('customer')">العميل <span class="sort-icon"><i class="fas fa-sort"></i></span></th>
+                        <th>ملاحظة</th>
+                        <th style="width:40px"></th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr><td colspan="10" class="empty-state"><i class="fas fa-inbox"></i><p>لا توجد ألواح مسجلة</p></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="footer-bar">
+    <div class="footer-left">
+        <span id="footerStatus">جاهز</span> · <span id="footerCount">0 عنصر</span>
+    </div>
+    <div class="footer-right">
+        <button class="btn btn-secondary btn-sm" onclick="backupData()"><i class="fas fa-file-code"></i> JSON</button>
+        <button class="btn btn-blue btn-sm" onclick="openReportDialog('excel')"><i class="fas fa-file-excel"></i> Excel</button>
+        <button class="btn btn-primary btn-sm" onclick="openReportDialog('pdf')"><i class="fas fa-file-pdf"></i> PDF</button>
+    </div>
+</div>
+
+<div id="reportModal" class="modal-overlay" onclick="if(event.target===this)closeReportDialog()">
+    <div class="modal" style="max-width:520px">
+        <div class="modal-header">
+            <h3><i class="fas fa-sliders-h"></i> خيارات التقرير (<span id="reportTargetLabel">PDF</span>)</h3>
+            <button type="button" class="modal-close" onclick="closeReportDialog()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="reportTarget" value="pdf">
+            <div class="form-group">
+                <label>نوع التقرير (القالب)</label>
+                <select id="reportType" onchange="renderReportColumns()"></select>
+            </div>
+            <div class="form-group">
+                <label style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                    <span>الأعمدة المصدَّرة (Excel و PDF)</span>
+                    <span style="display:flex;gap:6px">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="toggleAllReportColumns(true)">تحديد الكل</button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="toggleAllReportColumns(false)">إلغاء الكل</button>
+                    </span>
+                </label>
+                <div id="reportColumns" style="display:flex;flex-wrap:wrap;gap:8px;padding:10px;border:1px solid rgba(255,138,0,.25);border-radius:10px;font-size:13px"></div>
+                <small style="opacity:.7">تُحفظ التحديدات لكل نوع تقرير على هذا الجهاز.</small>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <div class="form-group"><label>من تاريخ</label><input type="date" id="reportFrom"></div>
+                <div class="form-group"><label>إلى تاريخ</label><input type="date" id="reportTo"></div>
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="setReportRange(7)">آخر 7 أيام</button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="setReportRange(30)">آخر 30 يوماً</button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="setReportRange(90)">آخر 90 يوماً</button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="setReportRange(0)">كل الفترات</button>
+            </div>
+            <div class="form-group"><label>اسم الشركة</label><input type="text" id="reportCompany" placeholder="اسم الشركة"></div>
+            <div class="form-group"><label>اسم الشركة (إنجليزي)</label><input type="text" id="reportCompanyEn" placeholder="Company Name"></div>
+            <div class="form-group"><label>فترة الضمان</label><input type="text" id="reportWarranty" placeholder="25 سنة للأداء / 12 سنة للمنتج"></div>
+            <div style="display:flex;flex-direction:column;gap:8px;font-size:13px">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="reportSummary" checked> تضمين قسم الملخص</label>
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="reportSignatures" checked> تضمين التوقيعات والختم</label>
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="reportUseFilters" checked> تطبيق فلاتر الجدول الحالية</label>
+            </div>
+
+            <div class="form-group" style="margin-top:12px">
+                <label style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                    <span><i class="fas fa-eye"></i> معاينة فورية (<span id="previewTargetLabel">PDF</span>)</span>
+                    <span id="reportPreviewStats" style="font-size:12px;opacity:.75"></span>
+                </label>
+                <div id="reportPreview" style="border:1px solid rgba(255,138,0,.25);border-radius:10px;padding:10px;background:rgba(255,255,255,.03);overflow:auto;max-height:260px"></div>
+                <small style="opacity:.7">تعرض المعاينة الأعمدة المختارة وأول 5 صفوف قبل بدء التصدير.</small>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeReportDialog()">إلغاء</button>
+            <button type="button" class="btn btn-primary" onclick="runReportExport()"><i class="fas fa-download"></i> تصدير</button>
+        </div>
+    </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ===================== STATE =====================
+let panels = [];
+let sortCol = 'id';
+let sortDir = 'desc';
+let html5QrCode = null;
+let isScanning = false;
+let duplicateSerials = new Set();
+let scannerCleanupPromise = null;
+let currentVideoTrack = null;
+let lastScanTime = 0;
+const SCAN_DEBOUNCE_MS = 800;
+
+let storedCustomers = ['مؤسسة صلة'];
+let storedProjects = ['مشروع القويرة','مشروع الرحاب','مشروع فلك 1','مشروع فلك 2','مشروع فلك 3','مشروع فلك 4','مشروع فلك 5','مشروع فلك 6'];
+let storedLocations = ['حقل الألواح','غرفة التحكم'];
+let storedModels = ['SP-400W-MONO','SP-450W-MONO','SP-550W-BIFACIAL'];
+try { const m = JSON.parse(localStorage.getItem('solarWarrantyModels_v1')||'null'); if (Array.isArray(m) && m.length) storedModels = m; } catch(e) {}
+try { const c = JSON.parse(localStorage.getItem('solarWarrantyCustomers_v1')||'null'); if (Array.isArray(c) && c.length) storedCustomers = c; } catch(e) {}
+try { const pr = JSON.parse(localStorage.getItem('solarWarrantyProjects_v1')||'null'); if (Array.isArray(pr) && pr.length) storedProjects = pr; } catch(e) {}
+try { const l = JSON.parse(localStorage.getItem('solarWarrantyLocations_v1')||'null'); if (Array.isArray(l) && l.length) storedLocations = l; } catch(e) {}
+function saveStoredModels() { try { localStorage.setItem('solarWarrantyModels_v1', JSON.stringify(storedModels)); } catch(e) {} }
+function saveStoredCustomers() { try { localStorage.setItem('solarWarrantyCustomers_v1', JSON.stringify(storedCustomers)); } catch(e) {} }
+function saveStoredProjects() { try { localStorage.setItem('solarWarrantyProjects_v1', JSON.stringify(storedProjects)); } catch(e) {} }
+function saveStoredLocations() { try { localStorage.setItem('solarWarrantyLocations_v1', JSON.stringify(storedLocations)); } catch(e) {} }
+
+function _populateSimpleSelect(selectId, items, selected) {
+    const sel = document.getElementById(selectId); if (!sel) return;
+    const cur = selected || sel.value;
+    let html = '<option value="">-- اختر --</option>';
+    items.forEach(v => { html += '<option value="' + escapeHtml(v) + '">' + escapeHtml(v) + '</option>'; });
+    html += '<option value="__new__">+ إضافة جديد</option>';
+    sel.innerHTML = html;
+    if (cur && items.includes(cur)) sel.value = cur;
+}
+function populateCustomerSelect(sel) { _populateSimpleSelect('customerName', storedCustomers, sel); }
+function populateProjectSelect(sel) { _populateSimpleSelect('projectName', storedProjects, sel); }
+function populateLocationSelect(sel) { _populateSimpleSelect('installLocation', storedLocations, sel); }
+function populateModelSelect() {
+    const sel = document.getElementById('panelModel'); if (!sel) return;
+    const cur = sel.value;
+    let html = '<option value="">-- اختر --</option>';
+    storedModels.forEach(m => { html += '<option value="' + escapeHtml(m) + '">' + escapeHtml(m) + '</option>'; });
+    html += '<option value="__new__">+ إضافة جديد</option>';
+    sel.innerHTML = html;
+    if (storedModels.includes(cur)) sel.value = cur;
+}
+
+const ITEM_CFG = {
+    customer: { list: () => storedCustomers, save: saveStoredCustomers, repop: (v) => populateCustomerSelect(v), selectId: 'customerName', inputId: 'newCustomerInput', rowId: 'newCustomerRow', label: 'العميل' },
+    project:  { list: () => storedProjects,  save: saveStoredProjects,  repop: (v) => populateProjectSelect(v),  selectId: 'projectName',   inputId: 'newProjectInput',  rowId: 'newProjectRow',  label: 'المشروع' },
+    location: { list: () => storedLocations, save: saveStoredLocations, repop: (v) => populateLocationSelect(v), selectId: 'installLocation',inputId: 'newLocationInput', rowId: 'newLocationRow', label: 'الموقع' },
+    model:    { list: () => storedModels,    save: saveStoredModels,    repop: () => { populateModelSelect(); }, selectId: 'panelModel',    inputId: 'newModelInput',    rowId: 'newModelRow',    label: 'الموديل' }
+};
+
+function saveNewItem(kind) {
+    const cfg = ITEM_CFG[kind]; if (!cfg) return;
+    const input = document.getElementById(cfg.inputId);
+    const val = (input.value || '').trim();
+    if (!val) { showToast('أدخل اسماً صالحاً', 'error'); input.focus(); return; }
+    if (val.length > 100) { showToast('الاسم طويل جداً', 'error'); return; }
+    const list = cfg.list();
+    if (list.includes(val)) { showToast('موجود مسبقاً', 'error'); }
+    else { list.push(val); cfg.save(); }
+    cfg.repop(val);
+    document.getElementById(cfg.selectId).value = val;
+    document.getElementById(cfg.rowId).classList.remove('show');
+    input.value = '';
+    updateFilters && updateFilters();
+    showToast('تم حفظ ' + cfg.label + ': ' + val, 'success');
+}
+function cancelNewItem(kind) {
+    const cfg = ITEM_CFG[kind]; if (!cfg) return;
+    document.getElementById(cfg.rowId).classList.remove('show');
+    document.getElementById(cfg.inputId).value = '';
+    const sel = document.getElementById(cfg.selectId);
+    if (sel.value === '__new__') sel.value = '';
+}
+
+// ===================== INIT =====================
+document.addEventListener('DOMContentLoaded', () => {
+    loadFromStorage();
+    loadProjects();
+    populateCameras();
+    populateModelSelect();
+    populateCustomerSelect();
+    populateProjectSelect();
+    populateLocationSelect();
+    renderProjectsScreen();
+    // restore previously-opened project if any
+    const last = localStorage.getItem('solarCurrentProject_v1');
+    if (last && projectsList.some(p => String(p.id) === String(last))) {
+        openProject(last);
+    } else {
+        showProjectsView();
+    }
+    document.getElementById('manualSerial').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); manualScan(); }
+    });
+    keepScreenAwake();
+});
+
+// ===================== PROJECTS =====================
+let projectsList = [];
+let currentProject = null;
+
+function loadProjects() {
+    try {
+        const raw = localStorage.getItem('solarProjects_v1');
+        const arr = raw ? JSON.parse(raw) : [];
+        projectsList = Array.isArray(arr) ? arr : [];
+    } catch(e) { projectsList = []; }
+    // Seed from legacy storedProjects on first run so existing names appear as cards
+    if (!projectsList.length && Array.isArray(storedProjects) && storedProjects.length) {
+        projectsList = storedProjects.map((name, i) => ({
+            id: 'p_' + Date.now() + '_' + i,
+            name: name,
+            customer: storedCustomers[0] || '',
+            date: new Date().toISOString().slice(0,10),
+            createdAt: Date.now()
+        }));
+        saveProjects();
+    }
+}
+function saveProjects() {
+    try { localStorage.setItem('solarProjects_v1', JSON.stringify(projectsList)); } catch(e) {}
+}
+
+function showProjectsView() {
+    currentProject = null;
+    localStorage.removeItem('solarCurrentProject_v1');
+    document.body.classList.add('view-projects');
+    document.body.classList.remove('view-main');
+    renderProjectsScreen();
+}
+function exitToProjects() { showProjectsView(); }
+
+function showMainView() {
+    document.body.classList.add('view-main');
+    document.body.classList.remove('view-projects');
+}
+
+function projectPanelCount(projectName) {
+    return panels.filter(p => p.project === projectName).length;
+}
+
+function renderProjectsScreen() {
+    const grid = document.getElementById('projectsGrid');
+    if (!grid) return;
+    let html = '';
+    if (!projectsList.length) {
+        html += '<div class="projects-empty" style="grid-column:1/-1"><i class="fas fa-folder-open"></i><p>لا توجد مشاريع بعد</p><p style="font-size:12px;margin-top:6px">اضغط "إضافة مشروع جديد" للبدء</p></div>';
+    } else {
+        projectsList.forEach(p => {
+            const count = projectPanelCount(p.name);
+            html += `
+            <div class="project-card" onclick="openProject('${p.id}')">
+                <div style="display:flex;gap:12px;align-items:flex-start">
+                    <div class="pc-icon"><i class="fas fa-solar-panel"></i></div>
+                    <div style="flex:1;min-width:0">
+                        <div class="pc-name">${escapeHtml(p.name)}</div>
+                    </div>
+                </div>
+                <div class="pc-meta">
+                    <span><i class="fas fa-user"></i> ${escapeHtml(p.customer || '—')}</span>
+                    <span><i class="fas fa-calendar"></i> ${escapeHtml(p.date || '—')}</span>
+                </div>
+                <div class="pc-footer">
+                    <span class="pc-count"><b>${count}</b> لوح مسجل</span>
+                    <button class="pc-del" onclick="event.stopPropagation();deleteProject('${p.id}')" title="حذف"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>`;
+        });
+    }
+    html += `
+    <div class="project-card project-card-add" onclick="openProjectModal()">
+        <i class="fas fa-plus-circle"></i>
+        <div>إضافة مشروع جديد</div>
+    </div>`;
+    grid.innerHTML = html;
+}
+
+function openProject(id) {
+    const p = projectsList.find(x => String(x.id) === String(id));
+    if (!p) return;
+    currentProject = p;
+    localStorage.setItem('solarCurrentProject_v1', p.id);
+    document.getElementById('apbName').textContent = p.name;
+    document.getElementById('apbMeta').textContent = `العميل: ${p.customer || '—'} · بدأ: ${p.date || '—'}`;
+    // the table itself is scoped to the open project; clear any stale project filter
+    const fp = document.getElementById('filterProject');
+    if (fp) fp.value = '';
+    showMainView();
+    updateFilters();
+    updateStats();
+    renderTable();
+}
+
+// Build the customer list from every available source (stored list + projects + panels)
+function allKnownCustomers() {
+    const fromProjects = (typeof projectsList !== 'undefined' ? projectsList : []).map(p => (p.customer || '').trim());
+    const fromPanels = (typeof panels !== 'undefined' ? panels : [])
+        .map(p => (p.customer || '').trim())
+        .filter(v => v && v !== 'غير محدد');
+    return [...new Set([...(storedCustomers || []), ...fromProjects, ...fromPanels].filter(Boolean))]
+        .sort((a, b) => a.localeCompare(b, 'ar'));
+}
+
+function populateModalCustomerSelect(selected) {
+    const sel = document.getElementById('pmCustomer');
+    if (!sel) return [];
+    const list = allKnownCustomers();
+    let html = '<option value="">' + (list.length ? '-- اختر العميل --' : '-- لا يوجد عملاء، أضف عميلاً --') + '</option>';
+    list.forEach(c => { html += '<option value="' + escapeHtml(c) + '">' + escapeHtml(c) + '</option>'; });
+    html += '<option value="__new__">+ إضافة عميل جديد</option>';
+    sel.innerHTML = html;
+    if (selected && list.includes(selected)) sel.value = selected;
+    return list;
+}
+
+function openProjectModal() {
+    const list = populateModalCustomerSelect();
+    document.getElementById('pmName').value = '';
+    document.getElementById('pmDate').value = new Date().toISOString().slice(0,10);
+    document.getElementById('pmNewCustomerRow').classList.remove('show');
+    document.getElementById('pmNewCustomerInput').value = '';
+    document.getElementById('projectModal').classList.add('show');
+    // No customers yet? open the "add customer" field directly so the field is never a dead end
+    if (!list.length) {
+        const sel = document.getElementById('pmCustomer');
+        sel.value = '__new__';
+        handleSelectChange('pmCustomer', 'pmNewCustomerInput', 'pmNewCustomerRow');
+    }
+    setTimeout(() => document.getElementById('pmName').focus(), 50);
+}
+function openModalNewCustomer() {
+    const sel = document.getElementById('pmCustomer');
+    const row = document.getElementById('pmNewCustomerRow');
+    const input = document.getElementById('pmNewCustomerInput');
+    if (!sel || !row || !input) return;
+    sel.value = '__new__';
+    row.classList.add('show');
+    input.value = '';
+    setTimeout(() => input.focus(), 50);
+}
+function closeProjectModal() {
+    document.getElementById('projectModal').classList.remove('show');
+}
+
+function saveModalNewCustomer() {
+    const input = document.getElementById('pmNewCustomerInput');
+    const val = (input.value || '').trim();
+    if (!val) { showToast('أدخل اسم العميل', 'error'); input.focus(); return; }
+    if (val.length > 100) { showToast('الاسم طويل جداً', 'error'); return; }
+    if (allKnownCustomers().includes(val)) {
+        populateModalCustomerSelect(val);
+        document.getElementById('pmNewCustomerRow').classList.remove('show');
+        input.value = '';
+        showToast('العميل موجود مسبقاً، تم اختياره', 'warning');
+        return;
+    }
+    storedCustomers.push(val); saveStoredCustomers();
+    populateModalCustomerSelect(val);
+    document.getElementById('pmNewCustomerRow').classList.remove('show');
+    input.value = '';
+    // also refresh main form customer dropdown
+    populateCustomerSelect();
+    showToast('تم حفظ العميل: ' + val, 'success');
+}
+function cancelModalNewCustomer() {
+    document.getElementById('pmNewCustomerRow').classList.remove('show');
+    document.getElementById('pmNewCustomerInput').value = '';
+    const sel = document.getElementById('pmCustomer');
+    if (sel.value === '__new__') sel.value = '';
+}
+
+
+function saveProject() {
+    const name = (document.getElementById('pmName').value || '').trim();
+    const customer = (function(){
+        const sel = document.getElementById('pmCustomer');
+        if (sel.value === '__new__') return (document.getElementById('pmNewCustomerInput').value || '').trim();
+        return sel.value;
+    })();
+    const date = document.getElementById('pmDate').value;
+    if (!name) { showToast('أدخل اسم المشروع', 'error'); return; }
+    if (name.length > 100) { showToast('اسم المشروع طويل جداً', 'error'); return; }
+    if (!customer) { showToast('اختر العميل', 'error'); return; }
+    if (!date) { showToast('أدخل التاريخ', 'error'); return; }
+    if (projectsList.some(p => p.name === name)) { showToast('اسم المشروع موجود مسبقاً', 'error'); return; }
+    // ensure customer stored
+    if (!storedCustomers.includes(customer)) { storedCustomers.push(customer); saveStoredCustomers(); populateCustomerSelect(); }
+    // ensure project name stored for filters
+    if (!storedProjects.includes(name)) { storedProjects.push(name); saveStoredProjects(); populateProjectSelect(); }
+    const proj = { id: 'p_' + Date.now(), name, customer, date, createdAt: Date.now() };
+    projectsList.unshift(proj);
+    saveProjects();
+    closeProjectModal();
+    renderProjectsScreen();
+    showToast('تم إنشاء المشروع: ' + name, 'success');
+}
+
+function deleteProject(id) {
+    const p = projectsList.find(x => String(x.id) === String(id));
+    if (!p) return;
+    const count = projectPanelCount(p.name);
+    let msg = 'حذف المشروع "' + p.name + '"؟';
+    if (count) msg += '\n\nيوجد ' + count + ' لوح مرتبط بهذا المشروع، سيتم الاحتفاظ بسجلات الألواح.';
+    if (!confirm(msg)) return;
+    projectsList = projectsList.filter(x => String(x.id) !== String(id));
+    saveProjects();
+    renderProjectsScreen();
+    showToast('تم حذف المشروع', 'warning');
+}
+
+
+
+function keepScreenAwake() {
+    if ('wakeLock' in navigator) {
+        const req = () => navigator.wakeLock.request('screen').catch(()=>{});
+        req();
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') req();
+        });
+    }
+}
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ===================== STORAGE =====================
+function saveToStorage() {
+    try { localStorage.setItem('solarWarrantyPanels_v2', JSON.stringify(panels)); } catch(e) {}
+}
+function loadFromStorage() {
+    try {
+        const data = localStorage.getItem('solarWarrantyPanels_v2');
+        if (data) panels = JSON.parse(data);
+    } catch(e) { panels = []; }
+}
+function clearAllData() {
+    if (!panels.length) return;
+    if (!confirm('هل أنت متأكد من حذف جميع البيانات؟ لا يمكن التراجع.')) return;
+    panels = []; duplicateSerials.clear();
+    saveToStorage(); updateStats(); renderTable(); updateFilters();
+    showToast('تم مسح جميع البيانات', 'warning');
+}
+function backupData() {
+    const blob = new Blob([JSON.stringify(panels, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'backup-' + new Date().toISOString().slice(0,10) + '.json';
+    a.click(); URL.revokeObjectURL(url);
+    showToast('تم التنزيل', 'success');
+}
+function _sanitizeStr(v, max) {
+    if (v === undefined || v === null) return '';
+    let s = String(v);
+    if (max && s.length > max) s = s.slice(0, max);
+    return s.replace(/<[^>]*>/g, '');
+}
+function _validatePanel(p) {
+    if (!p || typeof p !== 'object' || Array.isArray(p)) return null;
+    return {
+        id: Number.isFinite(Number(p.id)) ? Number(p.id) : Date.now() + Math.floor(Math.random()*1000),
+        serial: _sanitizeStr(p.serial, 100),
+        model: _sanitizeStr(p.model, 100),
+        warranty: _sanitizeStr(p.warranty, 20),
+        date: _sanitizeStr(p.date, 30),
+        location: _sanitizeStr(p.location, 200),
+        project: _sanitizeStr(p.project, 200),
+        customer: _sanitizeStr(p.customer, 200),
+        notes: _sanitizeStr(p.notes, 1000),
+        status: _sanitizeStr(p.status, 30)
+    };
+}
+function restoreData(e) {
+    const file = e.target.files[0]; if (!file) return;
+    if (file.size > 10 * 1024 * 1024) { showToast('الملف كبير جداً', 'error'); e.target.value = ''; return; }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+        try {
+            const data = JSON.parse(ev.target.result);
+            if (Array.isArray(data)) {
+                if (data.length > 50000) { showToast('عدد السجلات يتجاوز الحد', 'error'); return; }
+                const cleaned = data.map(_validatePanel).filter(Boolean);
+                panels = cleaned; saveToStorage(); updateStats(); renderTable(); updateFilters();
+                showToast('تم الاستعادة بنجاح (' + cleaned.length + ' سجل)', 'success');
+            } else { showToast('ملف غير صالح', 'error'); }
+        } catch(err) { showToast('خطأ في القراءة', 'error'); }
+    };
+    reader.readAsText(file); e.target.value = '';
+}
+
+// ===================== CAMERA / SCANNER =====================
+async function populateCameras() {
+    const sel = document.getElementById('cameraSelect');
+    try {
+        const devices = await Html5Qrcode.getCameras();
+        sel.innerHTML = '<option value="">اختر الكاميرا...</option>';
+        const back = [], other = [];
+        devices.forEach((d, i) => {
+            const label = (d.label || '').toLowerCase();
+            const opt = document.createElement('option');
+            opt.value = d.id;
+            opt.textContent = d.label || ('كاميرا ' + (i+1));
+            if (label.includes('back') || label.includes('rear') || label.includes('environment')) back.push(opt);
+            else other.push(opt);
+        });
+        back.forEach(o => sel.appendChild(o));
+        other.forEach(o => sel.appendChild(o));
+        if (back.length) sel.value = back[0].value;
+        else if (other.length) sel.value = other[0].value;
+    } catch(err) {
+        sel.innerHTML = '<option value="">لا توجد كاميرات</option>';
+    }
+}
+
+function showPermissionConsent() {
+    return new Promise((resolve) => {
+        if (localStorage.getItem('spwms_perm_consent_v2') === '1') { resolve(true); return; }
+
+        const overlay = document.createElement('div');
+        overlay.id = 'permConsentOverlay';
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,20,27,0.88);backdrop-filter:blur(6px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;font-family:inherit;';
+        document.body.appendChild(overlay);
+
+        const steps = [
+            {
+                key: 'camera',
+                icon: 'fa-camera',
+                title: 'إذن الكاميرا',
+                subtitle: 'الخطوة 1 من 2',
+                desc: 'يستخدم التطبيق كاميرا جهازك <b>فقط</b> أثناء عملية المسح لقراءة الأرقام التسلسلية والباركود المطبوعة على الألواح الشمسية.',
+                bullets: [
+                    'لا يتم تسجيل أي فيديو أو صورة.',
+                    'لا يتم رفع أي بيانات إلى أي خادم خارجي.',
+                    'يمكنك سحب الإذن في أي وقت من إعدادات المتصفح.'
+                ],
+                acceptLabel: 'السماح بالكاميرا',
+                onAccept: async () => {
+                    try {
+                        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+                        stream.getTracks().forEach(t => t.stop());
+                        return true;
+                    } catch (e) {
+                        alert('تم رفض إذن الكاميرا. فعّله من إعدادات المتصفح ثم أعد المحاولة.');
+                        return false;
+                    }
+                }
+            },
+            {
+                key: 'storage',
+                icon: 'fa-hard-drive',
+                title: 'إذن التخزين',
+                subtitle: 'الخطوة 2 من 2',
+                desc: 'نحتاج إلى إذن حفظ الملفات لتتمكّن من تصدير التقارير وحفظها على جهازك.',
+                bullets: [
+                    'حفظ تقارير Excel و PDF داخل مجلد التنزيلات.',
+                    'حفظ نسخة احتياطية محلية من بيانات المشاريع.',
+                    'كل الملفات تبقى على جهازك ولا تُشارَك تلقائياً.'
+                ],
+                acceptLabel: 'السماح بالتخزين',
+                onAccept: async () => true
+            }
+        ];
+
+        let idx = 0;
+
+        function render() {
+            const s = steps[idx];
+            overlay.innerHTML = `
+                <div style="background:#1a2230;color:#f3f4f6;max-width:440px;width:100%;border-radius:16px;padding:24px;border:1px solid rgba(255,138,0,0.3);box-shadow:0 20px 60px rgba(0,0,0,.5);">
+                    <div style="display:flex;gap:6px;margin-bottom:16px;">
+                        ${steps.map((_,i)=>`<div style="flex:1;height:4px;border-radius:2px;background:${i<=idx?'#FF8A00':'rgba(255,255,255,0.12)'};"></div>`).join('')}
+                    </div>
+                    <div style="text-align:center;margin-bottom:14px;">
+                        <div style="width:64px;height:64px;margin:0 auto 12px;background:rgba(255,138,0,0.15);border-radius:16px;display:flex;align-items:center;justify-content:center;color:#FF8A00;font-size:28px;">
+                            <i class="fas ${s.icon}"></i>
+                        </div>
+                        <div style="font-size:11px;color:#FF8A00;font-weight:700;letter-spacing:1px;margin-bottom:4px;">${s.subtitle}</div>
+                        <h2 style="font-size:19px;margin:0 0 8px;font-weight:700;">${s.title}</h2>
+                        <p style="font-size:13px;color:#c7ccd3;margin:0;line-height:1.6;">${s.desc}</p>
+                    </div>
+                    <ul style="list-style:none;padding:0;margin:16px 0;display:flex;flex-direction:column;gap:8px;">
+                        ${s.bullets.map(b=>`<li style="display:flex;gap:10px;align-items:flex-start;background:rgba(255,138,0,0.06);padding:10px 12px;border-radius:8px;font-size:12.5px;color:#e5e7eb;line-height:1.55;">
+                            <i class="fas fa-circle-check" style="color:#10b981;font-size:13px;margin-top:3px;"></i>
+                            <span style="flex:1;">${b}</span>
+                        </li>`).join('')}
+                    </ul>
+                    <div style="background:rgba(255,255,255,0.04);padding:10px 12px;border-radius:8px;font-size:11.5px;color:#9ca3af;line-height:1.6;margin-bottom:16px;">
+                        <i class="fas fa-lock" style="color:#10b981;margin-left:4px;"></i>
+                        بياناتك تبقى على جهازك، ولا نشارك أي شيء دون علمك.
+                    </div>
+                    <div style="display:flex;gap:8px;">
+                        <button id="permCancelBtn" style="flex:1;padding:12px;border-radius:10px;border:1px solid #374151;background:transparent;color:#e5e7eb;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit;">إلغاء</button>
+                        <button id="permAcceptBtn" style="flex:2;padding:12px;border-radius:10px;border:none;background:#FF8A00;color:#0F141B;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;">
+                            <i class="fas fa-check"></i> ${s.acceptLabel}
+                        </button>
+                    </div>
+                </div>`;
+            overlay.querySelector('#permCancelBtn').onclick = () => { overlay.remove(); resolve(false); };
+            overlay.querySelector('#permAcceptBtn').onclick = async () => {
+                const btn = overlay.querySelector('#permAcceptBtn');
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جارٍ المعالجة...';
+                const ok = await s.onAccept();
+                if (!ok) { btn.disabled = false; btn.innerHTML = `<i class="fas fa-check"></i> ${s.acceptLabel}`; return; }
+                if (idx < steps.length - 1) { idx++; render(); }
+                else {
+                    localStorage.setItem('spwms_perm_consent_v2', '1');
+                    overlay.remove();
+                    resolve(true);
+                }
+            };
+        }
+        render();
+    });
+}
+
+async function startScanner() {
+    const consented = await showPermissionConsent();
+    if (!consented) return;
+    if (scannerCleanupPromise) {
+        try { await scannerCleanupPromise; } catch(e){}
+        scannerCleanupPromise = null;
+    }
+    if (html5QrCode || isScanning) {
+        await forceCleanupScanner();
+        await delay(800);
+    }
+
+    let cameraId = document.getElementById('cameraSelect').value;
+    if (!cameraId) {
+        try {
+            const devices = await Html5Qrcode.getCameras();
+            const backCam = devices.find(d => {
+                const l = (d.label || '').toLowerCase();
+                return l.includes('back') || l.includes('rear') || l.includes('environment');
+            });
+            if (backCam) { cameraId = backCam.id; document.getElementById('cameraSelect').value = backCam.id; }
+            else if (devices.length) { cameraId = devices[0].id; document.getElementById('cameraSelect').value = devices[0].id; }
+        } catch(e) {}
+    }
+    if (!cameraId) {
+        showCameraError('لم يتم اختيار كاميرا', 'يرجى اختيار كاميرا من القائمة أو السماح بالوصول للكاميرا.');
+        return;
+    }
+
+    updateScannerUI('starting');
+    const box = document.getElementById('scannerBox');
+    box.innerHTML = '';
+    const statusBar = document.createElement('div');
+    statusBar.className = 'scan-status-bar';
+    statusBar.id = 'scanStatusBar';
+    statusBar.innerHTML = '<span class="dot warning" id="statusDot"></span><span id="statusText">جاري التشغيل...</span>';
+    box.appendChild(statusBar);
+    const frame = document.createElement('div');
+    frame.className = 'scan-frame';
+    frame.id = 'scanFrame';
+    frame.innerHTML = '<div class="scan-laser"></div><div class="scan-frame-label">وجّه الباركود هنا</div>';
+    box.appendChild(frame);
+
+    const formatsToSupport = [
+        Html5QrcodeSupportedFormats.QR_CODE,
+        Html5QrcodeSupportedFormats.CODE_128,
+        Html5QrcodeSupportedFormats.CODE_39,
+        Html5QrcodeSupportedFormats.CODE_93,
+        Html5QrcodeSupportedFormats.EAN_13,
+        Html5QrcodeSupportedFormats.EAN_8,
+        Html5QrcodeSupportedFormats.UPC_A,
+        Html5QrcodeSupportedFormats.UPC_E,
+        Html5QrcodeSupportedFormats.ITF,
+        Html5QrcodeSupportedFormats.PDF_417,
+        Html5QrcodeSupportedFormats.DATA_MATRIX,
+        Html5QrcodeSupportedFormats.AZTEC,
+        Html5QrcodeSupportedFormats.CODABAR
+    ];
+
+    html5QrCode = new Html5Qrcode('scannerBox', { formatsToSupport });
+
+    try {
+        await html5QrCode.start(
+            cameraId,
+            { fps: 30, qrbox: { width: 280, height: 180 }, aspectRatio: 1.777, disableFlip: false },
+            onScanSuccess, onScanFailure
+        );
+        isScanning = true;
+        updateScannerUI('scanning');
+        try {
+            const videoEl = document.querySelector('#scannerBox video');
+            if (videoEl && videoEl.srcObject) {
+                const tracks = videoEl.srcObject.getVideoTracks();
+                if (tracks.length) currentVideoTrack = tracks[0];
+            }
+        } catch(e) {}
+        showToast('تم تشغيل الماسح', 'success');
+    } catch(err) {
+        console.error('Scanner start error:', err);
+        handleCameraError(err);
+        await forceCleanupScanner();
+    }
+}
+
+async function stopScanner() {
+    if (scannerCleanupPromise) return;
+    scannerCleanupPromise = forceCleanupScanner();
+    await scannerCleanupPromise;
+    scannerCleanupPromise = null;
+}
+
+async function forceCleanupScanner() {
+    isScanning = false; currentVideoTrack = null;
+    if (html5QrCode) {
+        try { await html5QrCode.stop(); } catch(e){}
+        try { await html5QrCode.clear(); } catch(e){}
+        html5QrCode = null;
+    }
+    try {
+        document.querySelectorAll('video').forEach(v => {
+            if (v.srcObject) { v.srcObject.getTracks().forEach(t => t.stop()); v.srcObject = null; }
+        });
+    } catch(e){}
+    await delay(600);
+    const box = document.getElementById('scannerBox');
+    box.innerHTML = '<div class="scanner-placeholder" id="scannerPlaceholder"><i class="fas fa-camera"></i><p>الماسح جاهز</p><p class="small">اختر الكاميرا واضغط تشغيل</p></div><div class="scan-frame" id="scanFrame" style="display:none"><div class="scan-laser"></div><div class="scan-frame-label">وجّه الباركود هنا</div></div><div class="scan-status-bar" id="scanStatusBar" style="display:none"><span class="dot" id="statusDot"></span><span id="statusText">جاري التشغيل...</span></div>';
+    updateScannerUI('stopped');
+}
+
+function onScanSuccess(decodedText, decodedResult) {
+    const now = Date.now();
+    if (now - lastScanTime < SCAN_DEBOUNCE_MS) return;
+    lastScanTime = now;
+    const serial = cleanSerial(decodedText);
+    if (!serial) return;
+    console.log('Scanned:', serial, 'Format:', decodedResult?.result?.format?.formatName);
+    const input = document.getElementById('manualSerial');
+    input.value = serial; input.focus(); input.select();
+    const isDup = panels.some(p => p.serial === serial);
+    if (isDup) {
+        duplicateSerials.add(serial);
+        input.className = 'scan-error';
+        showToast('رقم مكرر: ' + serial, 'error');
+        playBeep('error');
+        updateStats(); renderTable();
+        setTimeout(() => { input.className = ''; input.value = ''; input.focus(); }, 1500);
+    } else {
+        input.className = 'scan-success';
+        showToast('تم القراءة: ' + serial, 'success');
+        playBeep('success');
+        if (navigator.vibrate) navigator.vibrate(50);
+        const continuous = document.getElementById('continuousScan').checked;
+        // Always register the scanned serial so it appears in the table immediately.
+        setTimeout(async () => {
+            if (input.value === serial) {
+                try { await manualScan(); } catch (e) { console.error('auto-save scan failed', e); }
+            }
+            if (!continuous) stopScanner();
+        }, 350);
+    }
+}
+
+function onScanFailure(error) {}
+
+function handleCameraError(err) {
+    const name = err.name || '';
+    const msg = err.message || '';
+    if (name === 'NotAllowedError' || msg.includes('Permission') || msg.includes('denied')) {
+        showCameraError('تم رفض الوصول للكاميرا', 'يرجى السماح بالوصول للكاميرا من إعدادات المتصفح.');
+    } else if (name === 'NotFoundError' || msg.includes('found')) {
+        showCameraError('لم يتم العثور على كاميرا', 'تأكد من توصيل الكاميرا أو استخدم إدخال يدوي.');
+    } else if (name === 'NotReadableError' || msg.includes('readable') || msg.includes('in use')) {
+        showCameraError('الكاميرا مشغولة', 'قد تكون الكاميرا مستخدمة من تطبيق آخر. أغلق التطبيقات الأخرى وحاول مرة أخرى.');
+    } else if (name === 'OverconstrainedError') {
+        showCameraError('إعدادات الكاميرا غير مدعومة', 'جرب كاميرا أخرى من القائمة.');
+    } else {
+        showCameraError('خطأ في الكاميرا', msg || 'حدث خطأ غير متوقع. جرب مرة أخرى.');
+    }
+}
+
+function showCameraError(title, message) {
+    const box = document.getElementById('scannerBox');
+    const existing = box.querySelector('.camera-error');
+    if (existing) existing.remove();
+    const errDiv = document.createElement('div');
+    errDiv.className = 'camera-error';
+    errDiv.innerHTML = '<i class="fas fa-exclamation-circle"></i><h3>' + title + '</h3><p>' + message + '</p><button class="btn btn-primary" onclick="this.parentElement.remove(); startScanner();"><i class="fas fa-redo"></i> إعادة المحاولة</button>';
+    box.appendChild(errDiv);
+    showToast(title, 'error');
+}
+
+async function toggleTorch() {
+    if (!currentVideoTrack) { showToast('الفلاش غير متوفر', 'warning'); return; }
+    try {
+        const capabilities = currentVideoTrack.getCapabilities();
+        if (!capabilities.torch) { showToast('الفلاش غير مدعوم', 'warning'); return; }
+        const isOn = currentVideoTrack.getSettings().torch || false;
+        await currentVideoTrack.applyConstraints({ advanced: [{ torch: !isOn }] });
+        const btn = document.getElementById('torchBtn');
+        btn.style.background = !isOn ? 'var(--warning)' : 'var(--brand-dark)';
+        showToast(!isOn ? 'الفلاش مفعّل' : 'الفلاش مطفأ', 'success');
+    } catch(e) { showToast('تعذر تفعيل الفلاش', 'warning'); }
+}
+
+function updateScannerUI(state) {
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const torchBtn = document.getElementById('torchBtn');
+    const statusBar = document.getElementById('scanStatusBar');
+    const statusDot = document.getElementById('statusDot');
+    const statusText = document.getElementById('statusText');
+    const frame = document.getElementById('scanFrame');
+    if (state === 'starting') {
+        startBtn.style.display = 'none'; stopBtn.style.display = 'block'; torchBtn.style.display = 'none';
+        if (statusBar) statusBar.style.display = 'flex';
+        if (statusDot) statusDot.className = 'dot warning';
+        if (statusText) statusText.textContent = 'جاري التشغيل...';
+        if (frame) frame.style.display = 'block';
+    } else if (state === 'scanning') {
+        startBtn.style.display = 'none'; stopBtn.style.display = 'block'; torchBtn.style.display = 'inline-flex';
+        if (statusBar) statusBar.style.display = 'flex';
+        if (statusDot) statusDot.className = 'dot';
+        if (statusText) statusText.textContent = 'جاري المسح...';
+        if (frame) frame.style.display = 'block';
+    } else if (state === 'stopped') {
+        startBtn.style.display = 'block'; stopBtn.style.display = 'none'; torchBtn.style.display = 'none';
+    }
+}
+
+// ===================== SERIAL PROCESSING =====================
+function cleanSerial(text) {
+    if (!text) return '';
+    return text.toString().trim().toUpperCase().replace(/[^A-Z0-9\-_]/g, '');
+}
+
+function manualScan() {
+    const input = document.getElementById('manualSerial');
+    const val = cleanSerial(input.value);
+    if (!val) { showToast('يرجى إدخال رقم تسلسلي', 'warning'); return; }
+    input.className = '';
+    const isDup = panels.some(p => p.serial === val);
+    if (isDup) {
+        duplicateSerials.add(val);
+        input.className = 'scan-error';
+        showToast('رقم مكرر: ' + val, 'error');
+        playBeep('error');
+        updateStats(); renderTable();
+        setTimeout(() => { input.className = ''; input.value = ''; input.focus(); }, 1500);
+        return;
+    }
+    const now = new Date();
+    const panel = {
+        id: panels.length > 0 ? Math.max(...panels.map(p => p.id)) + 1 : 1,
+        serial: val,
+        model: getSelectValue('panelModel','newModelInput','غير محدد'),
+        date: now.toLocaleDateString('ar-SA'),
+        time: now.toLocaleTimeString('ar-SA', {hour:'2-digit', minute:'2-digit'}),
+        timestamp: now.getTime(),
+        customer: (currentProject && currentProject.customer) || 'غير محدد',
+        project: (currentProject && currentProject.name) || 'غير محدد',
+
+        location: getSelectValue('installLocation','newLocationInput','حقل الألواح'),
+        warranty: document.getElementById('warrantyPeriod').value,
+        notes: document.getElementById('notes').value.trim(),
+        status: 'نشط'
+    };
+    panels.unshift(panel);
+    saveToStorage(); updateStats(); renderTable(); updateFilters();
+    input.value = ''; input.className = ''; input.focus();
+    showToast('تمت الإضافة: ' + val, 'success');
+    playBeep('success');
+    if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
+}
+
+// ===================== FORM =====================
+function handleSelectChange(selectId, newInputId, rowId) {
+    const sel = document.getElementById(selectId);
+    const row = rowId ? document.getElementById(rowId) : null;
+    const newInput = document.getElementById(newInputId);
+    if (sel.value === '__new__') {
+        if (row) row.classList.add('show'); else if (newInput) newInput.style.display = 'block';
+        if (newInput) newInput.focus();
+    } else {
+        if (row) row.classList.remove('show'); else if (newInput) newInput.style.display = 'none';
+    }
+}
+
+function getSelectValue(selectId, newInputId, fallback) {
+    const sel = document.getElementById(selectId);
+    if (sel.value === '__new__') {
+        const v = (document.getElementById(newInputId).value || '').trim();
+        return v || fallback;
+    }
+    return sel.value || fallback;
+}
+
+// ===================== TABLE =====================
+function renderTable() {
+    const tbody = document.getElementById('tableBody');
+    const search = (document.getElementById('searchInput').value || '').toLowerCase();
+    const filterDate = document.getElementById('filterDate').value;
+    const filterCustomer = document.getElementById('filterCustomer').value;
+    const filterProject = document.getElementById('filterProject').value;
+    const filterLocation = document.getElementById('filterLocation').value;
+
+    const scopedPanels = (typeof projectPanels === 'function') ? projectPanels() : panels;
+    let filtered = scopedPanels.filter(p => {
+        if (search) {
+            const searchable = [p.serial, p.model, p.customer, p.project, p.location, p.notes].join(' ').toLowerCase();
+            if (!searchable.includes(search)) return false;
+        }
+        if (filterDate && p.date !== filterDate) return false;
+        if (filterCustomer && p.customer !== filterCustomer) return false;
+        if (filterProject && p.project !== filterProject) return false;
+        if (filterLocation && p.location !== filterLocation) return false;
+        return true;
+    });
+
+    filtered.sort((a, b) => {
+        let av = a[sortCol], bv = b[sortCol];
+        if (sortCol === 'id') { av = Number(av) || 0; bv = Number(bv) || 0; }
+        else { av = String(av || '').toLowerCase(); bv = String(bv || '').toLowerCase(); }
+        if (av < bv) return sortDir === 'asc' ? -1 : 1;
+        if (av > bv) return sortDir === 'asc' ? 1 : -1;
+        return 0;
+    });
+
+    if (!filtered.length) {
+        tbody.innerHTML = '<tr><td colspan="10" class="empty-state"><i class="fas fa-inbox"></i><p>لا توجد نتائج</p></td></tr>';
+        document.getElementById('footerCount').textContent = '0 عنصر';
+        return;
+    }
+
+    tbody.innerHTML = filtered.map((p, idx) => {
+        const isDup = duplicateSerials.has(p.serial);
+        const noteShort = p.notes ? (p.notes.length > 20 ? p.notes.substring(0,20) + '...' : p.notes) : '-';
+        return '<tr class="' + (idx === 0 ? 'new-row ' : '') + (isDup ? 'duplicate' : '') + '"><td>#' + p.id + '</td><td class="serial-cell"><strong>' + escapeHtml(p.serial) + '</strong></td><td>' + escapeHtml(p.model) + '</td><td>' + escapeHtml(String(p.warranty || '-')) + '</td><td>' + escapeHtml(p.date) + '</td><td>' + escapeHtml(p.location) + '</td><td>' + escapeHtml(p.project) + '</td><td>' + escapeHtml(p.customer) + '</td><td title="' + escapeHtml(p.notes || '') + '">' + escapeHtml(noteShort) + '</td><td><button class="action-btn" onclick="deletePanel(' + p.id + ')" title="حذف"><i class="fas fa-trash"></i></button></td></tr>';
+    }).join('');
+    document.getElementById('footerCount').textContent = filtered.length + ' عنصر';
+}
+
+function sortTable(col) {
+    if (sortCol === col) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+    else { sortCol = col; sortDir = 'desc'; }
+    document.querySelectorAll('th').forEach(th => th.classList.remove('sorted'));
+    const th = document.querySelector('th[onclick="sortTable(\'' + col + '\')"]');
+    if (th) th.classList.add('sorted');
+    renderTable();
+}
+
+function deletePanel(id) {
+    if (!confirm('حذف هذا السجل؟')) return;
+    panels = panels.filter(p => p.id !== id);
+    saveToStorage(); updateStats(); renderTable(); updateFilters();
+    showToast('تم الحذف', 'warning');
+}
+
+// ===================== FILTERS =====================
+function updateFilters() {
+    const dates = [...new Set(panels.map(p => p.date))].sort();
+    const dataProjects = [...new Set(panels.map(p => p.project))].sort();
+    const dataCustomers = [...new Set(panels.map(p => p.customer))].sort();
+    const dataLocations = [...new Set(panels.map(p => p.location))].sort();
+    const allProjects = [...new Set([...storedProjects, ...dataProjects])].sort();
+    const allCustomers = [...new Set([...storedCustomers, ...dataCustomers])].sort();
+    const allLocations = [...new Set([...storedLocations, ...dataLocations])].sort();
+
+    const updateSelect = (id, items, label) => {
+        const sel = document.getElementById(id); if (!sel) return;
+        const cur = sel.value;
+        let html = '<option value="">كل ' + label + '</option>';
+        items.forEach(i => { html += '<option value="' + escapeHtml(i) + '">' + escapeHtml(i) + '</option>'; });
+        sel.innerHTML = html;
+        if (items.includes(cur)) sel.value = cur;
+    };
+    updateSelect('filterDate', dates, 'التواريخ');
+    updateSelect('filterCustomer', allCustomers, 'العملاء');
+    updateSelect('filterProject', allProjects, 'المشاريع');
+    updateSelect('filterLocation', allLocations, 'المواقع');
+}
+
+// ===================== STATS =====================
+function projectPanels() {
+    if (!currentProject) return panels;
+    const name = (currentProject.name || '').trim();
+    return panels.filter(p => (p.project || '').trim() === name);
+}
+function updateStats() {
+    const scoped = projectPanels();
+    document.getElementById('statTotal').textContent = scoped.length;
+    const today = new Date().toLocaleDateString('ar-SA');
+    document.getElementById('statToday').textContent = scoped.filter(p => p.date === today).length;
+    const scopedSerials = new Set(scoped.map(p => (p.serial || '').trim().toLowerCase()));
+    let dupCount = 0;
+    duplicateSerials.forEach(s => { if (scopedSerials.has(String(s).trim().toLowerCase())) dupCount++; });
+    document.getElementById('statDuplicates').textContent = currentProject ? dupCount : duplicateSerials.size;
+    document.getElementById('statActive').textContent = scoped.filter(p => p.status === 'نشط').length;
+}
+
+
+// ===================== EXPORT (Customizable Report Templates) =====================
+const REPORT_DEFAULTS = {
+    companyName: 'شركة الطاقة الشمسية المتقدمة',
+    companyNameEn: 'Advanced Solar Energy Co.',
+    warrantyPeriod: '25 سنة للأداء / 12 سنة للمنتج',
+    brandPrimary: 'FF8A00',
+    brandDark: '0F141B'
+};
+
+// Columns identical to the registered panels table
+const PANEL_COLUMNS = [
+    { key:'#',        label:'#',                 wch:6,  align:'center' },
+    { key:'serial',   label:'التسلسلي',          wch:26, align:'center', mono:true },
+    { key:'model',    label:'الموديل',           wch:22, align:'center' },
+    { key:'warranty', label:'المجموعة (String)', wch:18, align:'center' },
+    { key:'date',     label:'التاريخ',           wch:16, align:'center' },
+    { key:'location', label:'الموقع',            wch:20, align:'center' },
+    { key:'project',  label:'المشروع',           wch:22, align:'center' },
+    { key:'customer', label:'العميل',            wch:22, align:'center' },
+    { key:'notes',    label:'ملاحظة',            wch:34, align:'right'  }
+];
+const panelCols = () => PANEL_COLUMNS.map(c => Object.assign({}, c));
+
+// ---------- Templates ----------
+const REPORT_TEMPLATES = {
+    warranty: {
+        label: 'تقرير ضمان رسمي',
+        titleAr: 'تقرير ضمان الألواح الشمسية',
+        titleEn: 'SOLAR PANEL WARRANTY REPORT',
+        columns: panelCols(),
+        summary: true, signatures: true, table: true
+    },
+    inventory: {
+        label: 'تقرير جرد الألواح',
+        titleAr: 'تقرير جرد الألواح المركبة',
+        titleEn: 'INSTALLED PANELS INVENTORY REPORT',
+        columns: panelCols(),
+        summary: true, signatures: true, table: true
+    },
+    serials: {
+        label: 'قائمة الأرقام التسلسلية',
+        titleAr: 'قائمة الأرقام التسلسلية',
+        titleEn: 'SERIAL NUMBERS LIST',
+        columns: panelCols(),
+        summary: true, signatures: true, table: true
+    },
+    summary: {
+        label: 'ملخص تنفيذي (حسب المجموعات)',
+        titleAr: 'ملخص تنفيذي للتركيب',
+        titleEn: 'EXECUTIVE INSTALLATION SUMMARY',
+        columns: [
+            { key:'group', label:'المجموعة (String)', wch:22, align:'center' },
+            { key:'count', label:'عدد الألواح',       wch:16, align:'center' },
+            { key:'models', label:'الموديلات',        wch:38, align:'right'  }
+        ],
+        summary: true, signatures: true, table: true, grouped: true
+    }
+};
+
+// ---------- Saved options ----------
+function getReportOptions() {
+    let o = {};
+    try { o = JSON.parse(localStorage.getItem('reportOptions_v1') || '{}'); } catch(e) {}
+    const cols = (o.columns && typeof o.columns === 'object') ? o.columns : {};
+    return {
+        type: REPORT_TEMPLATES[o.type] ? o.type : 'warranty',
+        from: o.from || '',
+        to: o.to || '',
+        companyName: o.companyName || REPORT_DEFAULTS.companyName,
+        companyNameEn: o.companyNameEn || REPORT_DEFAULTS.companyNameEn,
+        warrantyPeriod: o.warrantyPeriod || REPORT_DEFAULTS.warrantyPeriod,
+        summary: o.summary !== false,
+        signatures: o.signatures !== false,
+        useFilters: o.useFilters !== false,
+        columns: cols
+    };
+}
+function saveReportOptions(o) {
+    try { localStorage.setItem('reportOptions_v1', JSON.stringify(o)); } catch(e) {}
+}
+
+// Columns selected for a template (fallback: all columns)
+function getTemplateColumnKeys(type, saved) {
+    const tpl = REPORT_TEMPLATES[type] || REPORT_TEMPLATES.warranty;
+    const all = tpl.columns.map(c => c.key);
+    const sel = (saved && saved[type]) || null;
+    if (!Array.isArray(sel)) return all;
+    const keep = all.filter(k => sel.indexOf(k) !== -1);
+    return keep.length ? keep : all;
+}
+
+function renderReportColumns() {
+    const type = document.getElementById('reportType').value;
+    const saved = getReportOptions().columns;
+    const active = getTemplateColumnKeys(type, saved);
+    const tpl = REPORT_TEMPLATES[type] || REPORT_TEMPLATES.warranty;
+    document.getElementById('reportColumns').innerHTML = tpl.columns.map(c =>
+        '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;background:rgba(255,255,255,.04);padding:6px 10px;border-radius:8px">' +
+        '<input type="checkbox" class="report-col" value="' + c.key + '"' +
+        (active.indexOf(c.key) !== -1 ? ' checked' : '') + '> ' + c.label + '</label>').join('');
+    refreshReportPreview();
+}
+function toggleAllReportColumns(on) {
+    document.querySelectorAll('#reportColumns .report-col').forEach(el => { el.checked = on; });
+    refreshReportPreview();
+}
+function getSelectedReportColumns() {
+    return [...document.querySelectorAll('#reportColumns .report-col:checked')].map(el => el.value);
+}
+
+function collectReportFormOpts() {
+    const type = document.getElementById('reportType').value;
+    const chosen = getSelectedReportColumns();
+    const columns = Object.assign({}, getReportOptions().columns, { [type]: chosen });
+    return {
+        type: type,
+        from: document.getElementById('reportFrom').value,
+        to: document.getElementById('reportTo').value,
+        companyName: (document.getElementById('reportCompany').value || '').trim() || REPORT_DEFAULTS.companyName,
+        companyNameEn: (document.getElementById('reportCompanyEn').value || '').trim() || REPORT_DEFAULTS.companyNameEn,
+        warrantyPeriod: (document.getElementById('reportWarranty').value || '').trim() || REPORT_DEFAULTS.warrantyPeriod,
+        summary: document.getElementById('reportSummary').checked,
+        signatures: document.getElementById('reportSignatures').checked,
+        useFilters: document.getElementById('reportUseFilters').checked,
+        columns: columns,
+        _chosen: chosen
+    };
+}
+
+// ---------- Live preview (Excel / PDF) ----------
+function refreshReportPreview() {
+    const host = document.getElementById('reportPreview');
+    if (!host) return;
+    const target = document.getElementById('reportTarget').value;
+    const lbl = document.getElementById('previewTargetLabel');
+    if (lbl) lbl.textContent = target === 'excel' ? 'Excel' : 'PDF';
+
+    const opts = collectReportFormOpts();
+    const stats = document.getElementById('reportPreviewStats');
+    if (!opts._chosen.length) {
+        host.innerHTML = '<div style="padding:16px;text-align:center;opacity:.7">اختر عموداً واحداً على الأقل لعرض المعاينة</div>';
+        if (stats) stats.textContent = '';
+        return;
+    }
+    let m;
+    try { m = _getReportMeta(opts); } catch (e) { console.error(e); host.innerHTML = ''; return; }
+
+    const cols = m.tpl.columns;
+    const rows = m.body.slice(0, 5);
+    if (stats) stats.textContent = m.body.length + ' صف · ' + cols.length + ' عمود';
+
+    const accent = target === 'excel' ? '#1D6F42' : '#FF8A00';
+    let html = '<div style="font-family:inherit">';
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;border-bottom:2px solid ' + accent + ';padding-bottom:6px;margin-bottom:8px">' +
+        '<strong style="font-size:13px">' + escapeHtml(m.tpl.titleAr) + '</strong>' +
+        '<span style="font-size:11px;opacity:.7">' + escapeHtml(m.companyName) + '</span></div>';
+    html += '<div style="font-size:11px;opacity:.8;margin-bottom:8px">العميل: ' + escapeHtml(m.customer) +
+        ' · المشروع: ' + escapeHtml(m.project) + ' · الفترة: ' + escapeHtml(m.rangeLabel) + '</div>';
+
+    if (!m.body.length) {
+        html += '<div style="padding:14px;text-align:center;opacity:.7">لا توجد بيانات مطابقة للفلاتر والفترة المحددة</div>';
+    } else {
+        html += '<table style="width:100%;border-collapse:collapse;font-size:11px"><thead><tr>' +
+            cols.map(c => '<th style="border:1px solid rgba(255,255,255,.12);background:' + accent +
+                ';color:#fff;padding:5px 6px;white-space:nowrap">' + escapeHtml(c.label) + '</th>').join('') +
+            '</tr></thead><tbody>';
+        rows.forEach((r, i) => {
+            html += '<tr style="background:' + (i % 2 ? 'rgba(255,255,255,.04)' : 'transparent') + '">' +
+                cols.map(c => '<td style="border:1px solid rgba(255,255,255,.1);padding:5px 6px;text-align:' +
+                    (c.align === 'right' ? 'right' : 'center') + '">' +
+                    escapeHtml(String(r[c.key] == null ? '' : r[c.key])) + '</td>').join('') + '</tr>';
+        });
+        html += '</tbody></table>';
+        if (m.body.length > rows.length) {
+            html += '<div style="font-size:11px;opacity:.7;margin-top:6px">… و ' + (m.body.length - rows.length) + ' صف إضافي في الملف النهائي</div>';
+        }
+        if (opts.summary && m.tpl.summary) {
+            html += '<div style="font-size:11px;margin-top:8px;opacity:.85">الملخص: إجمالي الألواح ' + m.totalPanels +
+                ' · المجموعات ' + m.totalStrings + ' · الموديلات ' + m.totalModels + '</div>';
+        }
+        if (opts.signatures && m.tpl.signatures) {
+            html += '<div style="font-size:11px;margin-top:6px;opacity:.7">التوقيعات والختم: مُدرجة</div>';
+        }
+    }
+    html += '</div>';
+    host.innerHTML = html;
+}
+
+function bindReportPreviewEvents() {
+    const modal = document.getElementById('reportModal');
+    if (!modal || modal.dataset.previewBound) return;
+    modal.dataset.previewBound = '1';
+    modal.addEventListener('change', refreshReportPreview);
+    modal.addEventListener('input', (e) => {
+        if (e.target && e.target.tagName === 'INPUT') refreshReportPreview();
+    });
+}
+
+function openReportDialog(target) {
+    const o = getReportOptions();
+    const modal = document.getElementById('reportModal');
+    document.getElementById('reportTarget').value = target;
+    const sel = document.getElementById('reportType');
+    sel.innerHTML = Object.keys(REPORT_TEMPLATES).map(k =>
+        '<option value="' + k + '">' + REPORT_TEMPLATES[k].label + '</option>').join('');
+    sel.value = o.type;
+    document.getElementById('reportFrom').value = o.from;
+    document.getElementById('reportTo').value = o.to;
+    document.getElementById('reportCompany').value = o.companyName;
+    document.getElementById('reportCompanyEn').value = o.companyNameEn;
+    document.getElementById('reportWarranty').value = o.warrantyPeriod;
+    document.getElementById('reportSummary').checked = o.summary;
+    document.getElementById('reportSignatures').checked = o.signatures;
+    document.getElementById('reportUseFilters').checked = o.useFilters;
+    document.getElementById('reportTargetLabel').textContent = target === 'excel' ? 'Excel' : 'PDF';
+    renderReportColumns();
+    bindReportPreviewEvents();
+    modal.classList.add('show');
+}
+function closeReportDialog() {
+    document.getElementById('reportModal').classList.remove('show');
+}
+function setReportRange(days) {
+    const to = new Date();
+    const from = new Date(to.getTime() - (days - 1) * 86400000);
+    document.getElementById('reportFrom').value = days ? from.toISOString().slice(0,10) : '';
+    document.getElementById('reportTo').value = days ? to.toISOString().slice(0,10) : '';
+    refreshReportPreview();
+}
+function runReportExport() {
+    const opts = collectReportFormOpts();
+    if (!opts._chosen.length) { showToast('اختر عموداً واحداً على الأقل', 'warning'); return; }
+    delete opts._chosen;
+    saveReportOptions(opts);
+    const target = document.getElementById('reportTarget').value;
+    closeReportDialog();
+    if (target === 'excel') exportExcel(opts); else exportPDF(opts);
+}
+
+
+
+function _inRange(p, from, to) {
+    if (!from && !to) return true;
+    const ts = Number(p.timestamp);
+    if (!ts) return true;
+    if (from && ts < new Date(from + 'T00:00:00').getTime()) return false;
+    if (to && ts > new Date(to + 'T23:59:59').getTime()) return false;
+    return true;
+}
+
+function _getReportMeta(opts) {
+    const o = Object.assign(getReportOptions(), opts || {});
+    const baseTpl = REPORT_TEMPLATES[o.type] || REPORT_TEMPLATES.warranty;
+    const keys = getTemplateColumnKeys(REPORT_TEMPLATES[o.type] ? o.type : 'warranty', o.columns);
+    const tpl = Object.assign({}, baseTpl, { columns: baseTpl.columns.filter(c => keys.indexOf(c.key) !== -1) });
+
+    const mostCommon = (key, list) => {
+        const counts = new Map();
+        list.forEach(p => { const v = (p[key]||'').trim(); if (v) counts.set(v,(counts.get(v)||0)+1); });
+        let best = '', n = 0;
+        counts.forEach((c,v) => { if (c>n){ n=c; best=v; }});
+        return best;
+    };
+    const fEl = (id) => { if (!o.useFilters) return ''; const el = document.getElementById(id); return el ? el.value : ''; };
+
+    // Scope rows to active filters + selected date range
+    const scoped = panels.filter(p =>
+        (!fEl('filterCustomer') || p.customer === fEl('filterCustomer')) &&
+        (!fEl('filterProject')  || p.project  === fEl('filterProject'))  &&
+        (!fEl('filterLocation') || p.location === fEl('filterLocation')) &&
+        (!fEl('filterDate')     || p.date     === fEl('filterDate'))     &&
+        _inRange(p, o.from, o.to)
+    );
+    const rows = scoped;
+    const customer = fEl('filterCustomer') || mostCommon('customer', rows) || '—';
+    const project  = fEl('filterProject')  || mostCommon('project', rows)  || '—';
+    const location = fEl('filterLocation') || mostCommon('location', rows) || '—';
+    const installDate = fEl('filterDate')  || mostCommon('date', rows)     || new Date().toLocaleDateString('ar-SA');
+
+    let phones = {};
+    try { phones = JSON.parse(localStorage.getItem('solarWarrantyPhones_v1') || '{}'); } catch(e) {}
+    let phone = phones[customer] || '—';
+
+    const strings = new Set(rows.map(p => (p.warranty||'').trim()).filter(Boolean));
+
+    // Grouped body for the executive summary template
+    let body;
+    if (tpl.grouped) {
+        const groups = new Map();
+        rows.forEach(p => {
+            const g = (p.warranty||'').trim() || 'غير محدد';
+            if (!groups.has(g)) groups.set(g, { count:0, models:new Set() });
+            const e = groups.get(g); e.count++; if (p.model) e.models.add(p.model);
+        });
+        body = [...groups.entries()].sort((a,b) => a[0].localeCompare(b[0], 'ar'))
+            .map(([g,e]) => ({ group:g, count:e.count, models:[...e.models].join(' · ') }));
+    } else {
+        body = rows.map((p,i) => Object.assign({}, p, { '#': i+1 }));
+    }
+
+    const rangeLabel = (o.from || o.to)
+        ? (o.from || '…') + '  ←  ' + (o.to || '…')
+        : 'كل الفترات';
+
+    return {
+        opts: o, tpl,
+        companyName: o.companyName, companyNameEn: o.companyNameEn, warrantyPeriod: o.warrantyPeriod,
+        customer, phone, project, location, installDate, rangeLabel,
+        reportDate: new Date().toLocaleDateString('ar-SA'),
+        rows, body, totalPanels: rows.length, totalStrings: strings.size,
+        totalModels: new Set(rows.map(p => (p.model||'').trim()).filter(Boolean)).size
+    };
+}
+
+function _summaryPairs(m) {
+    const pairs = [
+        ['إجمالي الألواح', m.totalPanels],
+        ['عدد المجموعات (Strings)', m.totalStrings],
+        ['عدد الموديلات', m.totalModels]
+    ];
+    pairs.push(['فترة الضمان', m.warrantyPeriod]);
+    pairs.push(['نطاق التاريخ', m.rangeLabel]);
+    return pairs;
+}
+
+// ---------- EXCEL ----------
+function exportExcel(optsArg) {
+    if (!panels.length) { showToast('لا توجد بيانات', 'warning'); return; }
+    const m = _getReportMeta(optsArg);
+    if (!m.body.length) { showToast('لا توجد بيانات للنطاق المحدد', 'warning'); return; }
+
+    const cols = m.tpl.columns;
+    const nc = cols.length;
+    const pad = (arr) => { const a = arr.slice(); while (a.length < nc) a.push(''); return a; };
+    const headers = cols.map(c => c.label);
+    const dataRows = m.body.map(r => cols.map(c => {
+        const v = r[c.key];
+        return v == null || v === '' ? (c.key === 'notes' ? '' : '-') : v;
+    }));
+
+    const aoa = [
+        pad([m.companyName]),
+        pad([m.tpl.titleEn + '  ·  ' + m.tpl.titleAr]),
+        [],
+        pad(['العميل', m.customer, 'الهاتف', m.phone]),
+        pad(['المشروع', m.project, 'الموقع', m.location]),
+        pad(['نطاق التاريخ', m.rangeLabel, 'تاريخ التقرير', m.reportDate]),
+        [],
+        headers,
+        ...dataRows
+    ];
+    const totalsRowIdx = aoa.length;
+    const totalsRow = new Array(nc).fill('');
+    totalsRow[0] = 'الإجمالي';
+    totalsRow[nc-1] = m.tpl.grouped ? m.totalPanels : m.body.length;
+    aoa.push(totalsRow);
+
+    let sumStart = -1, sumRows = [];
+    if (m.tpl.summary && m.opts.summary) {
+        aoa.push([]);
+        sumStart = aoa.length;
+        aoa.push(pad(['ملخص التقرير']));
+        const pairs = _summaryPairs(m);
+        for (let i=0;i<pairs.length;i+=2) {
+            const row = pad([pairs[i][0], pairs[i][1], (pairs[i+1]||['',''])[0], (pairs[i+1]||['',''])[1]]);
+            aoa.push(row); sumRows.push(aoa.length-1);
+        }
+    }
+    let sigRow = -1;
+    if (m.tpl.signatures && m.opts.signatures) {
+        aoa.push([]);
+        sigRow = aoa.length;
+        aoa.push(pad(['توقيع الفني', '', 'توقيع العميل', '', 'ختم الشركة']));
+        aoa.push(pad(['_______________________', '', '_______________________', '', '_______________________']));
+    }
+
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols'] = cols.map(c => ({ wch: c.wch || 18 }));
+    ws['!rows'] = [{hpt:34},{hpt:22},{},{hpt:22},{hpt:22},{hpt:22},{},{hpt:26}];
+    ws['!merges'] = [
+        {s:{r:0,c:0},e:{r:0,c:nc-1}},
+        {s:{r:1,c:0},e:{r:1,c:nc-1}},
+        {s:{r:totalsRowIdx,c:0},e:{r:totalsRowIdx,c:Math.max(0,nc-2)}}
+    ];
+    if (sumStart > -1) ws['!merges'].push({s:{r:sumStart,c:0},e:{r:sumStart,c:nc-1}});
+    ws['!views'] = [{RTL:true}];
+    ws['!freeze'] = { xSplit: 0, ySplit: 8 };
+    ws['!autofilter'] = { ref: 'A8:' + XLSX.utils.encode_col(nc-1) + '8' };
+
+    const F = 'Cairo';
+    const border = { top:{style:'thin',color:{rgb:'D1D5DB'}}, bottom:{style:'thin',color:{rgb:'D1D5DB'}}, left:{style:'thin',color:{rgb:'D1D5DB'}}, right:{style:'thin',color:{rgb:'D1D5DB'}} };
+    const setStyle = (addr, s) => { if (ws[addr]) ws[addr].s = s; };
+
+    setStyle('A1', { font:{name:F,bold:true,sz:20,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:REPORT_DEFAULTS.brandPrimary}}, alignment:{horizontal:'center',vertical:'center'} });
+    setStyle('A2', { font:{name:F,sz:11,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:REPORT_DEFAULTS.brandDark}}, alignment:{horizontal:'center',vertical:'center'} });
+
+    const infoLabel = { font:{name:F,bold:true,sz:11,color:{rgb:'374151'}}, fill:{fgColor:{rgb:'F3F4F6'}}, alignment:{horizontal:'right',vertical:'center',indent:1}, border };
+    const infoValue = { font:{name:F,sz:11,color:{rgb:'111827'}}, fill:{fgColor:{rgb:'FFFFFF'}}, alignment:{horizontal:'right',vertical:'center',indent:1}, border };
+    [3,4,5].forEach(r => {
+        [0,2].forEach(c => { if (c < nc) setStyle(XLSX.utils.encode_cell({r,c}), infoLabel); });
+        [1,3].forEach(c => { if (c < nc) setStyle(XLSX.utils.encode_cell({r,c}), infoValue); });
+    });
+
+    const head = { font:{name:F,bold:true,sz:11,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:REPORT_DEFAULTS.brandDark}}, alignment:{horizontal:'center',vertical:'center',wrapText:true}, border };
+    for (let c=0;c<nc;c++) setStyle(XLSX.utils.encode_cell({r:7,c}), head);
+
+    for (let r=0;r<dataRows.length;r++) {
+        const rowIdx = 8 + r;
+        const zebra = r % 2 === 0 ? 'FFFFFF' : 'F9FAFB';
+        for (let c=0;c<nc;c++) {
+            setStyle(XLSX.utils.encode_cell({r:rowIdx,c}), {
+                font:{name:F, sz:10, bold: !!cols[c].mono, color:{rgb:'1F2937'}},
+                fill:{fgColor:{rgb:zebra}},
+                alignment:{horizontal: cols[c].align || 'center', vertical:'center', wrapText: cols[c].align === 'right'},
+                border
+            });
+        }
+    }
+
+    const totLabel = { font:{name:F,bold:true,sz:11,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:REPORT_DEFAULTS.brandPrimary}}, alignment:{horizontal:'right',vertical:'center',indent:1}, border };
+    const totVal   = { font:{name:F,bold:true,sz:12,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:REPORT_DEFAULTS.brandPrimary}}, alignment:{horizontal:'center',vertical:'center'}, border };
+    for (let c=0;c<nc-1;c++) setStyle(XLSX.utils.encode_cell({r:totalsRowIdx,c}), totLabel);
+    setStyle(XLSX.utils.encode_cell({r:totalsRowIdx,c:nc-1}), totVal);
+
+    if (sumStart > -1) {
+        setStyle(XLSX.utils.encode_cell({r:sumStart,c:0}), { font:{name:F,bold:true,sz:13,color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:REPORT_DEFAULTS.brandDark}}, alignment:{horizontal:'center',vertical:'center'} });
+        const sumLabel = { font:{name:F,bold:true,sz:11,color:{rgb:'374151'}}, fill:{fgColor:{rgb:'FEF3C7'}}, alignment:{horizontal:'right',vertical:'center',indent:1}, border };
+        const sumVal   = { font:{name:F,bold:true,sz:12,color:{rgb:'F97316'}}, fill:{fgColor:{rgb:'FFFBEB'}}, alignment:{horizontal:'center',vertical:'center'}, border };
+        sumRows.forEach(r => {
+            [0,2].forEach(c => { if (c < nc) setStyle(XLSX.utils.encode_cell({r,c}), sumLabel); });
+            [1,3].forEach(c => { if (c < nc) setStyle(XLSX.utils.encode_cell({r,c}), sumVal); });
+        });
+    }
+
+    if (sigRow > -1) {
+        const sigHead = { font:{name:F,bold:true,sz:11,color:{rgb:'111827'}}, alignment:{horizontal:'center',vertical:'center'} };
+        const sigLine = { font:{name:F,sz:11,color:{rgb:'6B7280'}}, alignment:{horizontal:'center',vertical:'center'} };
+        [0,2,4].forEach(c => { if (c < nc) { setStyle(XLSX.utils.encode_cell({r:sigRow,c}), sigHead); setStyle(XLSX.utils.encode_cell({r:sigRow+1,c}), sigLine); } });
+    }
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'التقرير');
+    wb.Workbook = wb.Workbook || {}; wb.Workbook.Views = [{ RTL: true }];
+    XLSX.writeFile(wb, `${m.tpl.label}-${m.project||'تقرير'}-${new Date().toISOString().slice(0,10)}.xlsx`);
+    showToast('تم تصدير Excel: ' + m.tpl.label, 'success');
+}
+
+// ---------- PDF ----------
+function _buildPdfHTML(optsArg) {
+    const m = _getReportMeta(optsArg);
+    const esc = (v) => escapeHtml(v == null ? '' : String(v));
+    const cols = m.tpl.columns;
+
+    const rowsHtml = m.body.map(r => '<tr>' + cols.map(c => {
+        const v = r[c.key];
+        const style = 'text-align:' + (c.align === 'right' ? 'right' : 'center')
+            + (c.mono ? ";font-family:'Courier New',monospace;font-weight:700" : '');
+        return `<td style="${style}">${esc(v === '' || v == null ? '—' : v)}</td>`;
+    }).join('') + '</tr>').join('');
+
+    const infoCell = (label, value) => `
+        <div style="display:flex;border:1px solid #E5E7EB;border-radius:8px;overflow:hidden;background:#fff">
+            <div style="background:#F3F4F6;padding:8px 12px;font-weight:700;color:#374151;font-size:11px;min-width:96px;text-align:right">${label}</div>
+            <div style="padding:8px 12px;color:#111827;font-size:11.5px;flex:1;text-align:right">${esc(value)||'—'}</div>
+        </div>`;
+
+    const summaryHtml = (m.tpl.summary && m.opts.summary) ? `
+      <div style="padding:18px 28px 0">
+        <div style="font-size:13px;font-weight:800;color:#0F141B;margin-bottom:8px;border-right:4px solid #FF8A00;padding-right:10px">ملخص التقرير</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+          ${_summaryPairs(m).map(([l,v]) => `
+            <div style="border:1px solid #E5E7EB;border-top:4px solid #FF8A00;border-radius:10px;padding:12px 14px;background:#fff">
+              <div style="font-size:10.5px;color:#6B7280;font-weight:700">${esc(l)}</div>
+              <div style="font-size:16px;font-weight:800;color:#0F141B;margin-top:4px">${esc(v)}</div>
+            </div>`).join('')}
+        </div>
+      </div>` : '';
+
+    const signaturesHtml = (m.tpl.signatures && m.opts.signatures) ? `
+      <div style="padding:24px 28px 18px">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px">
+          ${['توقيع الفني','توقيع العميل','ختم الشركة'].map(l => `
+            <div style="text-align:center">
+              <div style="height:54px;border-bottom:1.5px dashed #9CA3AF;margin-bottom:6px"></div>
+              <div style="font-size:11px;font-weight:700;color:#374151">${l}</div>
+            </div>`).join('')}
+        </div>
+      </div>` : '<div style="height:18px"></div>';
+
+    return `
+    <div id="pdfReport" style="width:794px;background:#fff;color:#111827;font-family:'Cairo',sans-serif;direction:rtl">
+      <div style="background:linear-gradient(135deg,#FF8A00,#E5730A);color:#fff;padding:18px 28px;display:flex;justify-content:space-between;align-items:center">
+        <div style="display:flex;align-items:center;gap:14px">
+          <div style="width:58px;height:58px;border-radius:14px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;border:2px solid rgba(255,255,255,.35)">
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+          </div>
+          <div>
+            <div style="font-size:19px;font-weight:800;line-height:1.1">${esc(m.companyName)}</div>
+            <div style="font-size:10.5px;opacity:.9;margin-top:3px;letter-spacing:.5px">${esc(m.companyNameEn)}</div>
+          </div>
+        </div>
+        <div style="text-align:left">
+          <div style="font-size:10px;opacity:.9;letter-spacing:1.5px">${esc(m.tpl.titleEn)}</div>
+          <div style="font-size:17px;font-weight:800;margin-top:2px">${esc(m.tpl.titleAr)}</div>
+        </div>
+      </div>
+      <div style="height:4px;background:#0F141B"></div>
+
+      <div style="padding:18px 28px 6px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        ${infoCell('العميل', m.customer)}
+        ${infoCell('رقم الهاتف', m.phone)}
+        ${infoCell('المشروع', m.project)}
+        ${infoCell('الموقع', m.location)}
+        ${infoCell('نطاق التاريخ', m.rangeLabel)}
+        ${infoCell('تاريخ التقرير', m.reportDate)}
+      </div>
+
+      <div style="padding:14px 28px 0">
+        <div style="font-size:13px;font-weight:800;color:#0F141B;margin:8px 0 8px;border-right:4px solid #FF8A00;padding-right:10px">${esc(m.tpl.grouped ? 'توزيع الألواح على المجموعات' : 'تفاصيل الألواح المسجلة')}</div>
+        <table style="width:100%;border-collapse:collapse;font-size:11px;border:1px solid #E5E7EB">
+          <thead>
+            <tr style="background:#0F141B;color:#fff">
+              ${cols.map(c => `<th style="padding:9px 6px;text-align:center">${esc(c.label)}</th>`).join('')}
+            </tr>
+          </thead>
+          <tbody>${rowsHtml}</tbody>
+          <tfoot>
+            <tr style="background:#FF8A00;color:#fff;font-weight:800">
+              <td colspan="${cols.length-1}" style="padding:9px 12px;text-align:right;font-size:12px">الإجمالي</td>
+              <td style="padding:9px 12px;text-align:center;font-size:13px">${m.totalPanels}</td>
+            </tr>
+          </tfoot>
+        </table>
+        <style>
+          #pdfReport tbody td { padding:7px 6px; border-bottom:1px solid #EEF2F7; color:#1F2937 }
+          #pdfReport tbody tr:nth-child(even) td { background:#F9FAFB }
+        </style>
+      </div>
+
+      ${summaryHtml}
+      ${signaturesHtml}
+
+      <div style="padding:10px 28px;border-top:1px solid #E5E7EB;background:#F9FAFB;display:flex;justify-content:space-between;font-size:10px;color:#6B7280">
+        <div>© ${new Date().getFullYear()} ${esc(m.companyName)} — ${esc(m.tpl.label)}</div>
+        <div>${m.totalPanels} لوح · ${m.totalStrings} مجموعة</div>
+      </div>
+    </div>`;
+}
+
+async function _ensureCairoLoaded() {
+    try {
+        if (document.fonts && document.fonts.load) {
+            await Promise.all([
+                document.fonts.load('700 16px "Cairo"'),
+                document.fonts.load('400 14px "Cairo"'),
+                document.fonts.load('800 26px "Cairo"')
+            ]);
+        }
+        if (document.fonts && document.fonts.ready) await document.fonts.ready;
+    } catch(_) {}
+}
+
+async function exportPDF(optsArg) {
+    if (!panels.length) { showToast('لا توجد بيانات', 'warning'); return; }
+    const meta = _getReportMeta(optsArg);
+    if (!meta.body.length) { showToast('لا توجد بيانات للنطاق المحدد', 'warning'); return; }
+    showToast('جاري إنشاء التقرير...', 'info');
+
+    const host = document.createElement('div');
+    host.setAttribute('dir', 'rtl');
+    host.lang = 'ar';
+    host.style.cssText = 'position:fixed;top:0;left:0;width:794px;background:#fff;z-index:-1;opacity:0;pointer-events:none';
+    host.innerHTML = _buildPdfHTML(optsArg);
+    document.body.appendChild(host);
+
+    try {
+        await _ensureCairoLoaded();
+        await new Promise(r => setTimeout(r, 250));
+
+        const node = host.firstElementChild;
+        const canvas = await html2canvas(node, {
+            scale: 2,
+            backgroundColor: '#ffffff',
+            useCORS: true,
+            allowTaint: false,
+            logging: false,
+            windowWidth: 794,
+            width: 794,
+            height: node.scrollHeight
+        });
+
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4', compress: true });
+        const pageW = pdf.internal.pageSize.getWidth();
+        const pageH = pdf.internal.pageSize.getHeight();
+        const footerH = 22;
+        const usableH = pageH - footerH;
+
+        const pxPerPage = Math.floor(canvas.width * usableH / pageW);
+        const totalPages = Math.max(1, Math.ceil(canvas.height / pxPerPage));
+        let rendered = 0, pageIndex = 0;
+
+        while (rendered < canvas.height) {
+            const sliceH = Math.min(pxPerPage, canvas.height - rendered);
+            const pageCanvas = document.createElement('canvas');
+            pageCanvas.width = canvas.width;
+            pageCanvas.height = sliceH;
+            const ctx = pageCanvas.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+            ctx.drawImage(canvas, 0, rendered, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+            const imgData = pageCanvas.toDataURL('image/jpeg', 0.95);
+            const imgH = sliceH * pageW / canvas.width;
+            if (pageIndex > 0) pdf.addPage();
+            pdf.addImage(imgData, 'JPEG', 0, 0, pageW, imgH, undefined, 'FAST');
+
+            pdf.setFillColor(15,20,27);
+            pdf.rect(0, pageH - footerH, pageW, footerH, 'F');
+            pdf.setFont('helvetica','normal');
+            pdf.setFontSize(9);
+            pdf.setTextColor(255,255,255);
+            pdf.text(`Page ${pageIndex+1} / ${totalPages}`, pageW/2, pageH - 7, { align: 'center' });
+            pdf.text('SPWMS', 14, pageH - 7);
+            pdf.text(new Date().toISOString().slice(0,10), pageW - 14, pageH - 7, { align: 'right' });
+
+            rendered += sliceH;
+            pageIndex++;
+        }
+
+        pdf.save(`${meta.tpl.label}-${new Date().toISOString().slice(0,10)}.pdf`);
+        showToast('تم تصدير PDF: ' + meta.tpl.label, 'success');
+    } catch (e) {
+        console.error(e);
+        showToast('تعذر إنشاء PDF', 'error');
+    } finally {
+        host.remove();
+    }
+}
+
+// ===================== UTILS =====================
+function showToast(message, type) {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = 'toast ' + (type || 'success');
+    const icon = type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-times-circle' : 'fa-exclamation-circle';
+    toast.innerHTML = '<i class="fas ' + icon + '"></i><span>' + escapeHtml(message) + '</span>';
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
+function playBeep(type) {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        gain.gain.value = 0.15;
+        osc.connect(gain); gain.connect(ctx.destination);
+        if (type === 'success') { osc.frequency.value = 1200; osc.start(); osc.stop(ctx.currentTime + 0.08); }
+        else { osc.frequency.value = 300; osc.start(); osc.stop(ctx.currentTime + 0.15); }
+    } catch(e) {}
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text || '';
+    return div.innerHTML;
+}
+
+window.addEventListener('beforeunload', async () => {
+    await forceCleanupScanner();
+});
+
+
+// ===================== PERMISSIONS =====================
+async function requestPermissions() {
+    const grantBtn = document.getElementById('grantBtn');
+    const permError = document.getElementById('permError');
+    const cameraStatus = document.getElementById('permCameraStatus');
+    const storageStatus = document.getElementById('permStorageStatus');
+
+    grantBtn.disabled = true;
+    grantBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحقق...';
+    permError.style.display = 'none';
+
+    let cameraGranted = false;
+    let storageGranted = false;
+
+    // 1. Request camera permission
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        stream.getTracks().forEach(t => t.stop());
+        cameraGranted = true;
+        cameraStatus.textContent = 'مسموح';
+        cameraStatus.style.color = '#10b981';
+    } catch(err) {
+        console.log('Camera permission denied:', err);
+        cameraStatus.textContent = 'مرفوض';
+        cameraStatus.style.color = '#ef4444';
+        permError.textContent = 'تم رفض الوصول للكاميرا. يمكنك استخدام الإدخال اليدوي.';
+        permError.style.display = 'block';
+    }
+
+    // 2. Check storage (localStorage)
+    try {
+        localStorage.setItem('_perm_test', '1');
+        localStorage.removeItem('_perm_test');
+        storageGranted = true;
+        storageStatus.textContent = 'مسموح';
+        storageStatus.style.color = '#10b981';
+    } catch(err) {
+        storageStatus.textContent = 'مرفوض';
+        storageStatus.style.color = '#ef4444';
+    }
+
+    // Small delay to show status
+    await new Promise(r => setTimeout(r, 500));
+
+    // Hide overlay and show app
+    hidePermissionOverlay();
+
+    // If camera granted, auto-populate cameras
+    if (cameraGranted) {
+        setTimeout(() => populateCameras(), 500);
+    }
+
+    showToast(cameraGranted ? 'تم السماح بالوصول' : 'وضع الإدخال اليدوي فقط', cameraGranted ? 'success' : 'warning');
+}
+
+function skipPermissions() {
+    hidePermissionOverlay();
+    showToast('وضع الإدخال اليدوي فقط', 'warning');
+}
+
+function hidePermissionOverlay() {
+    const overlay = document.getElementById('permissionOverlay');
+    if (overlay) {
+        overlay.style.transition = 'opacity 0.5s ease';
+        overlay.style.opacity = '0';
+        setTimeout(() => overlay.remove(), 500);
+    }
+}
+
+// Check if permissions already granted on load
+async function checkExistingPermissions() {
+    try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const hasCamera = devices.some(d => d.kind === 'videoinput');
+        const cameraLabel = devices.find(d => d.kind === 'videoinput' && d.label);
+
+        // If camera labels are visible, permission was already granted
+        if (cameraLabel && cameraLabel.label) {
+            hidePermissionOverlay();
+            setTimeout(() => populateCameras(), 300);
+            return;
+        }
+    } catch(e) {}
+
+    // Also check if we already have camera permission via getUserMedia
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        stream.getTracks().forEach(t => t.stop());
+        hidePermissionOverlay();
+        setTimeout(() => populateCameras(), 300);
+    } catch(e) {
+        // Permission not granted yet - keep overlay visible
+        console.log('Waiting for user permission...');
+    }
+}
+
+// Run permission check on load
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(checkExistingPermissions, 500);
+});
+
+// ===================== SUPABASE CLOUD SYNC (offline-first) =====================
+(function(){
+  const SUPABASE_URL = 'https://ejsxhgnopgeloyqmeinq.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqc3hoZ25vcGdlbG95cW1laW5xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMDkyMDcsImV4cCI6MjA5NTg4NTIwN30.ufWanib-pZ1MJfcGfHAdeO6ZzVzBATqClOQm8ry47rw';
+  const STORAGE_KEY = 'sb-ejsxhgnopgeloyqmeinq-auth-token';
+  const CACHE_KEY_PROJECTS = 'spwms_cache_projects_v1';
+  const CACHE_KEY_PANELS = 'spwms_cache_panels_v1';
+  const QUEUE_KEY = 'spwms_sync_queue_v1';
+  if (!window.supabase || !window.supabase.createClient) { console.warn('Supabase SDK not loaded'); return; }
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: { storage: window.localStorage, storageKey: STORAGE_KEY, persistSession: true, autoRefreshToken: true }
+  });
+  window.__sb = sb;
+  let userId = null;
+  let projIdMap = new Map(); // local id -> db uuid
+  let projNameToDbId = new Map();
+  let panelDbIdById = new Map(); // local numeric id -> db uuid
+  let queue = loadQueue();
+  let syncing = false;
+  let didInitialFetch = false;
+
+  // ---------- Offline status pill ----------
+  const pill = document.createElement('div');
+  pill.id = 'syncPill';
+  pill.style.cssText = 'position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:99999;background:#0F141B;color:#fff;padding:8px 14px;border-radius:999px;font-size:12px;font-family:Cairo,sans-serif;box-shadow:0 4px 12px rgba(0,0,0,.25);display:none;align-items:center;gap:8px;pointer-events:none';
+  document.body.appendChild(pill);
+  function updatePill() {
+    const online = navigator.onLine;
+    const q = queue.length;
+    if (online && q === 0) { pill.style.display = 'none'; return; }
+    pill.style.display = 'inline-flex';
+    if (!online) {
+      pill.style.background = '#EF4444';
+      pill.innerHTML = '<i class="fa-solid fa-cloud-slash"></i> غير متصل — يتم الحفظ محلياً' + (q ? ' (' + q + ' بانتظار المزامنة)' : '');
+    } else if (syncing) {
+      pill.style.background = '#3B82F6';
+      pill.innerHTML = '<i class="fa-solid fa-arrows-rotate fa-spin"></i> جارٍ مزامنة ' + q + ' عملية...';
+    } else {
+      pill.style.background = '#F59E0B';
+      pill.innerHTML = '<i class="fa-solid fa-clock"></i> ' + q + ' عملية بانتظار المزامنة';
+    }
+  }
+
+  // ---------- Cache & queue ----------
+  function loadCache(key) { try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch(e){ return null; } }
+  function saveCache(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch(e){} }
+  function persistCache() {
+    saveCache(CACHE_KEY_PROJECTS, projectsList);
+    saveCache(CACHE_KEY_PANELS, panels.map(p => ({...p})));
+    saveCache('spwms_panelDbMap_v1', Array.from(panelDbIdById.entries()));
+    saveCache('spwms_projDbMap_v1', Array.from(projIdMap.entries()));
+    saveCache('spwms_projNameMap_v1', Array.from(projNameToDbId.entries()));
+  }
+  function loadQueue(){ try { return JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]'); } catch(e){ return []; } }
+  function saveQueue(){ try { localStorage.setItem(QUEUE_KEY, JSON.stringify(queue)); } catch(e){} updatePill(); }
+  function enqueue(op){ op.ts = Date.now(); op.tempId = op.tempId || ('tmp_' + Math.random().toString(36).slice(2)); queue.push(op); saveQueue(); return op.tempId; }
+
+  async function getUser() {
+    try { const { data } = await sb.auth.getUser(); return data.user || null; } catch(e){ return null; }
+  }
+
+  function hydrateFromCache() {
+    const cp = loadCache(CACHE_KEY_PROJECTS); const cn = loadCache(CACHE_KEY_PANELS);
+    const pMap = loadCache('spwms_panelDbMap_v1'); const jMap = loadCache('spwms_projDbMap_v1'); const nMap = loadCache('spwms_projNameMap_v1');
+    if (Array.isArray(cp)) projectsList = cp;
+    if (Array.isArray(cn)) panels = cn;
+    if (Array.isArray(pMap)) panelDbIdById = new Map(pMap);
+    if (Array.isArray(jMap)) projIdMap = new Map(jMap);
+    if (Array.isArray(nMap)) projNameToDbId = new Map(nMap);
+    renderProjectsScreen();
+    if (typeof updateStats === 'function') updateStats();
+    if (typeof renderTable === 'function') renderTable();
+    if (typeof updateFilters === 'function') updateFilters();
+  }
+
+  async function fetchAll() {
+    if (!navigator.onLine || !userId) return;
+    try {
+      const [{ data: projs, error: pe }, { data: pans, error: ne }] = await Promise.all([
+        sb.from('projects').select('*').order('created_at', { ascending: false }),
+        sb.from('panels').select('*').order('created_at', { ascending: false })
+      ]);
+      if (pe || ne) { console.error(pe||ne); return; }
+      // Preserve any queued (unsynced) items so they stay visible
+      const pendingProjects = projectsList.filter(p => String(p.id).startsWith('tmp_'));
+      const pendingPanels = panels.filter(p => p.__pending);
+      projIdMap = new Map(); projNameToDbId = new Map(); panelDbIdById = new Map();
+      projectsList = (projs || []).map(r => {
+        const localId = 'p_' + r.id;
+        projIdMap.set(localId, r.id);
+        projNameToDbId.set(r.name, r.id);
+        return { id: localId, name: r.name, customer: r.customer, date: r.project_date, createdAt: new Date(r.created_at).getTime() };
+      }).concat(pendingProjects);
+      panels = (pans || []).map((r, i) => {
+        const localId = i + 1;
+        panelDbIdById.set(localId, r.id);
+        return {
+          id: localId, serial: r.serial, model: r.model || 'غير محدد',
+          date: r.install_date || '', time: r.install_time || '',
+          timestamp: new Date(r.created_at).getTime(),
+          customer: r.customer || 'غير محدد', project: r.project_name || 'غير محدد',
+          location: r.location || 'حقل الألواح', warranty: r.warranty_years || '',
+          notes: r.notes || '', status: r.status || 'نشط', __dbId: r.id
+        };
+      });
+      // Re-append pending panels at top with fresh numeric ids
+      let nextId = panels.length ? Math.max(...panels.map(p => p.id)) : 0;
+      pendingPanels.forEach(p => { nextId += 1; p.id = nextId; });
+      panels = pendingPanels.concat(panels);
+      const dbProjects = [...new Set(projectsList.map(p => p.name))];
+      const dbCustomers = [...new Set(projectsList.map(p => p.customer).filter(Boolean))];
+      if (dbProjects.length) storedProjects = [...new Set([...storedProjects, ...dbProjects])];
+      if (dbCustomers.length) storedCustomers = [...new Set([...storedCustomers, ...dbCustomers])];
+      saveStoredProjects(); saveStoredCustomers();
+      persistCache();
+      renderProjectsScreen();
+      if (typeof updateStats === 'function') updateStats();
+      if (typeof renderTable === 'function') renderTable();
+      if (typeof updateFilters === 'function') updateFilters();
+      if (typeof populateProjectSelect === 'function') populateProjectSelect();
+      if (typeof populateCustomerSelect === 'function') populateCustomerSelect();
+      didInitialFetch = true;
+    } catch(e){ console.warn('fetchAll failed (offline?)', e); }
+  }
+
+  // ---------- Queue processing ----------
+  async function flushQueue() {
+    if (syncing || !navigator.onLine || !userId || queue.length === 0) return;
+    syncing = true; updatePill();
+    while (queue.length) {
+      const op = queue[0];
+      try {
+        if (op.type === 'insertProject') {
+          const { data, error } = await sb.from('projects').insert(op.payload).select().single();
+          if (error) throw error;
+          // map temp local id -> real
+          const oldLocal = op.localId; const newLocal = 'p_' + data.id;
+          projIdMap.set(newLocal, data.id);
+          projNameToDbId.set(data.name, data.id);
+          const pj = projectsList.find(p => p.id === oldLocal);
+          if (pj) { pj.id = newLocal; }
+          // panels referencing project by name only; update project_id in pending panel ops
+          queue.forEach(q2 => { if (q2.type === 'insertPanel' && q2.payload && !q2.payload.project_id && q2.payload.project_name === data.name) q2.payload.project_id = data.id; });
+        } else if (op.type === 'insertPanel') {
+          if (!op.payload.project_id && op.payload.project_name) {
+            op.payload.project_id = projNameToDbId.get(op.payload.project_name) || null;
+          }
+          const { data, error } = await sb.from('panels').insert(op.payload).select().single();
+          if (error) throw error;
+          const target = panels.find(p => p.__tempId === op.tempId);
+          if (target) { target.__dbId = data.id; target.__pending = false; panelDbIdById.set(target.id, data.id); delete target.__tempId; }
+        } else if (op.type === 'deletePanel') {
+          if (op.dbId) { const { error } = await sb.from('panels').delete().eq('id', op.dbId); if (error) throw error; }
+        } else if (op.type === 'deleteProject') {
+          if (op.dbId) { const { error } = await sb.from('projects').delete().eq('id', op.dbId); if (error) throw error; }
+        }
+        queue.shift(); saveQueue();
+      } catch(e) {
+        console.error('sync op failed, will retry later', op, e);
+        break; // stop; keep for retry
+      }
+    }
+    syncing = false;
+    persistCache();
+    if (typeof renderTable === 'function') renderTable();
+    renderProjectsScreen();
+    updatePill();
+  }
+
+  // ---------- Wrap mutations (offline-first) ----------
+  window.saveProject = function() {
+    const name = (document.getElementById('pmName').value || '').trim();
+    const sel = document.getElementById('pmCustomer');
+    const customer = sel.value === '__new__' ? (document.getElementById('pmNewCustomerInput').value || '').trim() : sel.value;
+    const date = document.getElementById('pmDate').value;
+    if (!name) { showToast('أدخل اسم المشروع', 'error'); return; }
+    if (!customer) { showToast('اختر العميل', 'error'); return; }
+    if (!date) { showToast('أدخل التاريخ', 'error'); return; }
+    if (projectsList.some(p => p.name === name)) { showToast('اسم المشروع موجود مسبقاً', 'error'); return; }
+    if (!userId) { showToast('يجب تسجيل الدخول', 'error'); return; }
+    const tempId = 'tmp_' + Math.random().toString(36).slice(2);
+    projectsList.unshift({ id: tempId, name, customer, date, createdAt: Date.now() });
+    if (!storedCustomers.includes(customer)) { storedCustomers.push(customer); saveStoredCustomers(); populateCustomerSelect(); }
+    if (!storedProjects.includes(name)) { storedProjects.push(name); saveStoredProjects(); populateProjectSelect(); }
+    enqueue({ type: 'insertProject', localId: tempId, payload: { user_id: userId, name, customer, project_date: date } });
+    persistCache();
+    closeProjectModal();
+    renderProjectsScreen();
+    showToast(navigator.onLine ? 'تم إنشاء المشروع: ' + name : 'تم الحفظ محلياً — ستتم المزامنة عند عودة الاتصال', 'success');
+    flushQueue();
+  };
+
+  window.deleteProject = function(id) {
+    const p = projectsList.find(x => String(x.id) === String(id));
+    if (!p) return;
+    const count = projectPanelCount(p.name);
+    let msg = 'حذف المشروع "' + p.name + '"؟';
+    if (count) msg += '\n\nيوجد ' + count + ' لوح مرتبط بهذا المشروع، سيتم الاحتفاظ بسجلات الألواح.';
+    if (!confirm(msg)) return;
+    const dbId = projIdMap.get(id);
+    // If it was queued as insert and never synced, remove that queued op
+    if (String(id).startsWith('tmp_')) {
+      queue = queue.filter(op => !(op.type === 'insertProject' && op.localId === id));
+      saveQueue();
+    } else if (dbId) {
+      enqueue({ type: 'deleteProject', dbId });
+    }
+    projectsList = projectsList.filter(x => String(x.id) !== String(id));
+    persistCache();
+    renderProjectsScreen();
+    showToast('تم حذف المشروع', 'warning');
+    flushQueue();
+  };
+
+  window.manualScan = function() {
+    const input = document.getElementById('manualSerial');
+    const val = cleanSerial(input.value);
+    if (!val) { showToast('يرجى إدخال رقم تسلسلي', 'warning'); return; }
+    input.className = '';
+    if (panels.some(p => p.serial === val)) {
+      duplicateSerials.add(val);
+      input.className = 'scan-error';
+      showToast('رقم مكرر: ' + val, 'error');
+      playBeep('error');
+      updateStats(); renderTable();
+      setTimeout(() => { input.className = ''; input.value = ''; input.focus(); }, 1500);
+      return;
+    }
+    if (!userId) { showToast('يجب تسجيل الدخول', 'error'); return; }
+    const now = new Date();
+    const model = getSelectValue('panelModel','newModelInput','غير محدد');
+    const location = getSelectValue('installLocation','newLocationInput','حقل الألواح');
+    const warranty = document.getElementById('warrantyPeriod').value;
+    const notes = document.getElementById('notes').value.trim();
+    const projectName = (currentProject && currentProject.name) || 'غير محدد';
+    const customer = (currentProject && currentProject.customer) || 'غير محدد';
+    const dbProjectId = projNameToDbId.get(projectName) || null;
+    const install_date = now.toLocaleDateString('ar-SA');
+    const install_time = now.toLocaleTimeString('ar-SA', {hour:'2-digit', minute:'2-digit'});
+    const newId = panels.length > 0 ? Math.max(...panels.map(p => p.id)) + 1 : 1;
+    const tempId = 'tmp_' + Math.random().toString(36).slice(2);
+    panels.unshift({
+      id: newId, serial: val, model, date: install_date, time: install_time,
+      timestamp: now.getTime(), customer, project: projectName, location,
+      warranty, notes, status: 'نشط', __tempId: tempId, __pending: true
+    });
+    enqueue({
+      type: 'insertPanel', tempId,
+      payload: {
+        user_id: userId, project_id: dbProjectId, project_name: projectName, customer,
+        serial: val, model, warranty_years: warranty ? parseInt(warranty,10) : null,
+        install_date, install_time, location, notes, status: 'نشط'
+      }
+    });
+    persistCache();
+    updateStats(); renderTable(); updateFilters();
+    input.value = ''; input.className = ''; input.focus();
+    showToast(navigator.onLine ? 'تمت الإضافة: ' + val : 'تم الحفظ محلياً: ' + val, 'success');
+    playBeep('success');
+    if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
+    flushQueue();
+  };
+
+  window.deletePanel = function(id) {
+    if (!confirm('حذف هذا السجل؟')) return;
+    const panel = panels.find(p => p.id === id);
+    const dbId = panel && (panel.__dbId || panelDbIdById.get(id));
+    if (panel && panel.__pending && panel.__tempId) {
+      queue = queue.filter(op => !(op.type === 'insertPanel' && op.tempId === panel.__tempId));
+      saveQueue();
+    } else if (dbId) {
+      enqueue({ type: 'deletePanel', dbId });
+    }
+    panels = panels.filter(p => p.id !== id);
+    persistCache();
+    updateStats(); renderTable(); updateFilters();
+    showToast('تم الحذف', 'warning');
+    flushQueue();
+  };
+
+  // Expose manual sync
+  window.__spwmsSync = flushQueue;
+
+  // ---------- Init ----------
+  async function bridgeOwnsData() {
+    try { return window.__spwmsBridgeReady ? await window.__spwmsBridgeReady : false; } catch(e) { return false; }
+  }
+
+  async function init() {
+    if (await bridgeOwnsData()) { pill.style.display = 'none'; return; }
+    // 1) Show cached data immediately so app works offline
+    hydrateFromCache();
+    updatePill();
+    // 2) Try online path
+    const user = await getUser();
+    if (!user) return;
+    userId = user.id;
+    await fetchAll();
+    await flushQueue();
+    updatePill();
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => setTimeout(init, 100));
+  } else { setTimeout(init, 100); }
+
+  // Online/offline listeners → auto-sync
+  window.addEventListener('online', async () => {
+    if (await bridgeOwnsData()) return;
+    updatePill();
+    if (!userId) { const u = await getUser(); if (u) userId = u.id; }
+    await flushQueue();
+    if (!didInitialFetch) await fetchAll();
+  });
+  window.addEventListener('offline', async () => { if (!(await bridgeOwnsData())) updatePill(); });
+  // Periodic retry every 30s while queue non-empty
+  setInterval(async () => { if (await bridgeOwnsData()) return; if (queue.length && navigator.onLine) flushQueue(); }, 30000);
+
+  sb.auth.onAuthStateChange(async (_e, session) => {
+    if (await bridgeOwnsData()) { if (session && session.user) userId = session.user.id; return; }
+    if (session && session.user) { userId = session.user.id; fetchAll().then(flushQueue); }
+    else { userId = null; }
+  });
+})();
+
+// ===================== OFFLINE-FIRST BRIDGE (SQLite via native shell) =====================
+(function(){
+  const CHANNEL = 'spwms-bridge';
+  if (window.parent === window) return; // not embedded in the app shell
+  const pending = new Map();
+  window.addEventListener('message', (ev) => {
+    const d = ev.data;
+    if (!d || d.channel !== CHANNEL || d.direction !== 'response') return;
+    const entry = pending.get(d.requestId);
+    if (!entry) return;
+    pending.delete(d.requestId);
+    if (d.error) entry.reject(new Error(d.error), d.code); else entry.resolve(d.result);
+  });
+  function call(action, payload, timeout) {
+    return new Promise((resolve, reject) => {
+      const requestId = 'r' + Math.random().toString(36).slice(2);
+      const t = setTimeout(() => { pending.delete(requestId); reject(new Error('bridge_timeout')); }, timeout || 15000);
+      pending.set(requestId, {
+        resolve: (v) => { clearTimeout(t); resolve(v); },
+        reject: (e, code) => { clearTimeout(t); if (code) e.code = code; reject(e); }
+      });
+      window.parent.postMessage({ channel: CHANNEL, direction: 'request', requestId, action, payload: payload || {} }, '*');
+    });
+  }
+
+  const readyPromise = call('ready', {}, 6000).then(() => true).catch((e) => {
+    console.warn('[spwms] offline-first bridge unavailable, using legacy storage', e);
+    return false;
+  });
+  window.__spwmsBridgeReady = readyPromise;
+
+  async function refreshFromLocalDb() {
+    const [dbPanels, dbProjects] = await Promise.all([call('listPanels'), call('listProjects')]);
+    panels = dbPanels.map(p => ({
+      id: p.id, lid: p.lid, serial: p.serial, model: p.model, date: p.date, time: p.time,
+      timestamp: p.timestamp, customer: p.customer, project: p.project, location: p.location,
+      warranty: p.warranty, notes: p.notes, status: p.status, __pending: p.pending
+    }));
+    projectsList = dbProjects.map(p => ({ id: p.id, lid: p.lid, name: p.name, customer: p.customer, date: p.date, createdAt: p.createdAt }));
+    const names = [...new Set(projectsList.map(p => p.name).filter(Boolean))];
+    const customers = [...new Set(projectsList.map(p => p.customer).filter(Boolean))];
+    if (names.length) { storedProjects = [...new Set([...storedProjects, ...names])]; saveStoredProjects(); }
+    if (customers.length) { storedCustomers = [...new Set([...storedCustomers, ...customers])]; saveStoredCustomers(); }
+    if (currentProject) {
+      const fresh = projectsList.find(p => String(p.id) === String(currentProject.id) || p.name === currentProject.name);
+      currentProject = fresh || null;
+      if (!currentProject) localStorage.removeItem('solarCurrentProject_v1');
+    }
+    if (typeof renderProjectsScreen === 'function') renderProjectsScreen();
+    if (typeof updateStats === 'function') updateStats();
+    if (typeof renderTable === 'function') renderTable();
+    if (typeof updateFilters === 'function') updateFilters();
+    if (typeof populateProjectSelect === 'function') populateProjectSelect();
+    if (typeof populateCustomerSelect === 'function') populateCustomerSelect();
+  }
+
+  function installOverrides() {
+    window.__spwmsOfflineFirst = true;
+    const pill = document.getElementById('syncPill');
+    if (pill) pill.style.display = 'none'; // the app shell shows the status indicator
+
+    window.saveProject = async function() {
+      const name = (document.getElementById('pmName').value || '').trim();
+      const sel = document.getElementById('pmCustomer');
+      const customer = sel.value === '__new__' ? (document.getElementById('pmNewCustomerInput').value || '').trim() : sel.value;
+      const date = document.getElementById('pmDate').value;
+      if (!name) { showToast('أدخل اسم المشروع', 'error'); return; }
+      if (!customer) { showToast('اختر العميل', 'error'); return; }
+      if (!date) { showToast('أدخل التاريخ', 'error'); return; }
+      if (projectsList.some(p => p.name === name)) { showToast('اسم المشروع موجود مسبقاً', 'error'); return; }
+      try {
+        await call('createProject', { name, customer, date });
+        if (!storedCustomers.includes(customer)) { storedCustomers.push(customer); saveStoredCustomers(); }
+        if (!storedProjects.includes(name)) { storedProjects.push(name); saveStoredProjects(); }
+        closeProjectModal();
+        await refreshFromLocalDb();
+        showToast('تم إنشاء المشروع: ' + name, 'success');
+      } catch (e) {
+        console.error('createProject failed', e);
+        showToast('تعذّر إنشاء المشروع', 'error');
+      }
+    };
+
+    window.deleteProject = async function(id) {
+      const p = projectsList.find(x => String(x.id) === String(id));
+      if (!p) return;
+      const count = projectPanelCount(p.name);
+      let msg = 'حذف المشروع "' + p.name + '"؟';
+      if (count) msg += '\n\nيوجد ' + count + ' لوح مرتبط بهذا المشروع، سيتم الاحتفاظ بسجلات الألواح.';
+      if (!confirm(msg)) return;
+      try {
+        await call('deleteProject', { lid: p.lid });
+        await refreshFromLocalDb();
+        showToast('تم حذف المشروع', 'warning');
+      } catch (e) {
+        console.error('deleteProject failed', e);
+        showToast('تعذّر حذف المشروع', 'error');
+      }
+    };
+
+    window.manualScan = async function() {
+      const input = document.getElementById('manualSerial');
+      const val = cleanSerial(input.value);
+      if (!val) { showToast('يرجى إدخال رقم تسلسلي', 'warning'); return; }
+      input.className = '';
+      if (panels.some(p => p.serial === val)) {
+        duplicateSerials.add(val);
+        input.className = 'scan-error';
+        showToast('رقم مكرر: ' + val, 'error');
+        playBeep('error');
+        updateStats(); renderTable();
+        setTimeout(() => { input.className = ''; input.value = ''; input.focus(); }, 1500);
+        return;
+      }
+      const now = new Date();
+      const payload = {
+        serial: val,
+        model: getSelectValue('panelModel','newModelInput','غير محدد'),
+        location: getSelectValue('installLocation','newLocationInput','حقل الألواح'),
+        warranty: document.getElementById('warrantyPeriod').value,
+        notes: document.getElementById('notes').value.trim(),
+        project: (currentProject && currentProject.name) || 'غير محدد',
+        customer: (currentProject && currentProject.customer) || 'غير محدد',
+        date: now.toLocaleDateString('ar-SA'),
+        time: now.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }),
+        status: 'نشط'
+      };
+      try {
+        await call('createPanel', payload);
+        await refreshFromLocalDb();
+        input.value = ''; input.className = ''; input.focus();
+        showToast('تمت الإضافة: ' + val, 'success');
+        playBeep('success');
+        if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
+      } catch (e) {
+        if (e && e.code === 'duplicate_serial') {
+          duplicateSerials.add(val);
+          input.className = 'scan-error';
+          showToast('رقم مكرر: ' + val, 'error');
+          playBeep('error');
+          setTimeout(() => { input.className = ''; input.value = ''; input.focus(); }, 1500);
+          return;
+        }
+        console.error('createPanel failed', e);
+        showToast('تعذّر حفظ السجل', 'error');
+      }
+    };
+
+    window.deletePanel = async function(id) {
+      if (!confirm('حذف هذا السجل؟')) return;
+      const panel = panels.find(p => p.id === id);
+      if (!panel) return;
+      try {
+        await call('deletePanel', { lid: panel.lid });
+        await refreshFromLocalDb();
+        showToast('تم الحذف', 'warning');
+      } catch (e) {
+        console.error('deletePanel failed', e);
+        showToast('تعذّر الحذف', 'error');
+      }
+    };
+
+    window.__spwmsSync = async function() {
+      try { await call('sync', {}, 60000); await refreshFromLocalDb(); } catch (e) { console.warn('sync failed', e); }
+    };
+  }
+
+  const MIGRATED_KEY = 'spwms_sqlite_migrated_v1';
+  async function migrateLegacyCacheOnce() {
+    if (localStorage.getItem(MIGRATED_KEY) === '1') return;
+    let cachedPanels = [], cachedProjects = [];
+    try { cachedPanels = JSON.parse(localStorage.getItem('spwms_cache_panels_v1') || '[]') || []; } catch(e) {}
+    try { cachedProjects = JSON.parse(localStorage.getItem('spwms_cache_projects_v1') || '[]') || []; } catch(e) {}
+    if (!cachedPanels.length && !cachedProjects.length) { localStorage.setItem(MIGRATED_KEY, '1'); return; }
+    let projDbMap = [];
+    try { projDbMap = JSON.parse(localStorage.getItem('spwms_projNameMap_v1') || '[]') || []; } catch(e) {}
+    const nameToDb = new Map(projDbMap);
+    await call('importLegacy', {
+      panels: cachedPanels.map(p => ({ serial: p.serial, model: p.model, warranty: p.warranty, date: p.date, time: p.time, customer: p.customer, project: p.project, location: p.location, notes: p.notes, status: p.status, dbId: p.__dbId || '' })),
+      projects: cachedProjects.map(p => ({ name: p.name, customer: p.customer, date: p.date, remoteId: nameToDb.get(p.name) || '' }))
+    }, 60000);
+    localStorage.setItem(MIGRATED_KEY, '1');
+  }
+
+  async function boot() {
+    if (!(await readyPromise)) return;
+    installOverrides();
+    try { await migrateLegacyCacheOnce(); } catch (e) { console.warn('legacy migration skipped', e); }
+    try { await refreshFromLocalDb(); } catch (e) { console.error('local load failed', e); }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => setTimeout(boot, 300));
+  } else { setTimeout(boot, 300); }
+})();
+</script>
+</body>
+</html>

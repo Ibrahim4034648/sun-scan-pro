@@ -572,22 +572,25 @@ A premium industrial SaaS platform built specifically for real-world solar panel
 
 It must look modern, highly professional, practical, and reliable enough for daily operational use.
 
-# SunScan Pro
+This project was built with [Lovable](https://lovable.dev).
 
-This project is a native Android application rewritten from its original web/React version.
+**Live app**: https://sun-scan-pro.lovable.app
 
-## Features
-- **Barcode/QR Scanning**: Uses CameraX and ML Kit for high-performance scanning of solar panel serial numbers.
-- **Warranty Registration**: Register model, warranty years, customer, project, and location.
-- **Local Persistence**: All records are saved locally using Room Database.
-- **Records Management**: Expandable cards to view and manage existing warranty records.
+## Build with Lovable
 
-## Tech Stack
-- **Kotlin**
-- **Jetpack Compose**
-- **Room Database** (Local Storage)
-- **ML Kit Vision & CameraX** (Barcode Scanning)
+Continue developing this project in the [Lovable editor](https://lovable.dev/projects/33e88332-cc3b-4c3e-bfad-fbc87cdf19da).
+
+- **Ship faster**: describe what you want to build and Lovable handles the code.
+- **Stay in sync**: every change made in Lovable is committed straight to this repository.
+- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
 
 ## Development
-To build the app:
-Run `compile_applet` to generate the APK.
+
+Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+
+```sh
+git clone <this-repository-url>
+cd <repository-name>
+npm i
+npm run dev
+```
