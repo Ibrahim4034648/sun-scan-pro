@@ -190,7 +190,7 @@ export function Scanner({ onScan, continuous = true }: Props) {
     try {
       await s.applyVideoConstraints({
         advanced: [{ torch: !torch }],
-      } as MediaTrackConstraints);
+      } as unknown as MediaTrackConstraints);
       setTorch(!torch);
     } catch {
       setError("الفلاش غير مدعوم على هذا الجهاز");
