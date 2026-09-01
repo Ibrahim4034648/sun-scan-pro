@@ -75,17 +75,37 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Lovable App" },
-      { name: "description", content: "Scan, register, and manage solar panel warranty information in a professional mobile-first field management system." },
+      {
+        name: "description",
+        content:
+          "Scan, register, and manage solar panel warranty information in a professional mobile-first field management system.",
+      },
       { name: "author", content: "Lovable" },
       { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Scan, register, and manage solar panel warranty information in a professional mobile-first field management system." },
+      {
+        property: "og:description",
+        content:
+          "Scan, register, and manage solar panel warranty information in a professional mobile-first field management system.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
       { name: "twitter:title", content: "Lovable App" },
-      { name: "twitter:description", content: "Scan, register, and manage solar panel warranty information in a professional mobile-first field management system." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/aef56d05-5e71-401c-86ce-668fb5e2c455/id-preview-17e864dd--33e88332-cc3b-4c3e-bfad-fbc87cdf19da.lovable.app-1779131765009.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/aef56d05-5e71-401c-86ce-668fb5e2c455/id-preview-17e864dd--33e88332-cc3b-4c3e-bfad-fbc87cdf19da.lovable.app-1779131765009.png" },
+      {
+        name: "twitter:description",
+        content:
+          "Scan, register, and manage solar panel warranty information in a professional mobile-first field management system.",
+      },
+      {
+        property: "og:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/aef56d05-5e71-401c-86ce-668fb5e2c455/id-preview-17e864dd--33e88332-cc3b-4c3e-bfad-fbc87cdf19da.lovable.app-1779131765009.png",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/aef56d05-5e71-401c-86ce-668fb5e2c455/id-preview-17e864dd--33e88332-cc3b-4c3e-bfad-fbc87cdf19da.lovable.app-1779131765009.png",
+      },
     ],
     links: [
       {

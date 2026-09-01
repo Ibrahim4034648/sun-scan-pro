@@ -124,7 +124,11 @@ async function pushItem(item: SyncQueueItem, userId: string): Promise<void> {
     if (project.remoteId) {
       const { error } = await supabase
         .from("projects")
-        .update({ name: project.name, customer: project.customer, project_date: project.projectDate })
+        .update({
+          name: project.name,
+          customer: project.customer,
+          project_date: project.projectDate,
+        })
         .eq("id", project.remoteId);
       if (error) throw error;
       await db.markProjectSynced(project.id, project.remoteId);

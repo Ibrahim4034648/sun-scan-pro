@@ -165,7 +165,9 @@ async function handle(action: string, payload: Record<string, unknown>): Promise
 
     case "importLegacy": {
       // One-time migration of the old localStorage cache into the local DB.
-      const rawPanels = Array.isArray(payload.panels) ? (payload.panels as Record<string, unknown>[]) : [];
+      const rawPanels = Array.isArray(payload.panels)
+        ? (payload.panels as Record<string, unknown>[])
+        : [];
       const rawProjects = Array.isArray(payload.projects)
         ? (payload.projects as Record<string, unknown>[])
         : [];

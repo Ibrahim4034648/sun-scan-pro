@@ -24,8 +24,9 @@ export function RecordsTable({ records, onDelete }: Props) {
     const term = q.trim().toLowerCase();
     if (!term) return records;
     return records.filter((r) =>
-      [r.serial, r.model, r.customer, r.project, r.location, r.notes]
-        .some((v) => v?.toLowerCase().includes(term))
+      [r.serial, r.model, r.customer, r.project, r.location, r.notes].some((v) =>
+        v?.toLowerCase().includes(term),
+      ),
     );
   }, [records, q]);
 
@@ -42,15 +43,23 @@ export function RecordsTable({ records, onDelete }: Props) {
           />
         </div>
         <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
-          <span>إجمالي: <span className="font-semibold text-foreground">{records.length}</span></span>
-          {q && <span>نتائج: <span className="font-semibold text-foreground">{filtered.length}</span></span>}
+          <span>
+            إجمالي: <span className="font-semibold text-foreground">{records.length}</span>
+          </span>
+          {q && (
+            <span>
+              نتائج: <span className="font-semibold text-foreground">{filtered.length}</span>
+            </span>
+          )}
         </div>
       </div>
 
       {filtered.length === 0 ? (
         <div className="py-16 flex flex-col items-center justify-center text-muted-foreground gap-2">
           <Inbox className="h-12 w-12 opacity-40" />
-          <p className="text-sm">{records.length === 0 ? "لا توجد سجلات بعد" : "لا توجد نتائج مطابقة"}</p>
+          <p className="text-sm">
+            {records.length === 0 ? "لا توجد سجلات بعد" : "لا توجد نتائج مطابقة"}
+          </p>
         </div>
       ) : (
         <ul className="divide-y">
@@ -66,13 +75,19 @@ export function RecordsTable({ records, onDelete }: Props) {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="font-mono font-semibold truncate">{r.serial}</span>
-                      {isDup && <span className="text-[10px] bg-destructive text-destructive-foreground px-1.5 py-0.5 rounded">مكرر</span>}
+                      {isDup && (
+                        <span className="text-[10px] bg-destructive text-destructive-foreground px-1.5 py-0.5 rounded">
+                          مكرر
+                        </span>
+                      )}
                     </div>
                     <div className="text-xs text-muted-foreground truncate mt-0.5">
                       {r.customer} • {r.model}
                     </div>
                   </div>
-                  <ChevronDown className={`h-4 w-4 text-muted-foreground transition ${isOpen ? "rotate-180" : ""}`} />
+                  <ChevronDown
+                    className={`h-4 w-4 text-muted-foreground transition ${isOpen ? "rotate-180" : ""}`}
+                  />
                 </button>
                 {isOpen && (
                   <div className="px-3 pb-3 space-y-1.5 text-xs">

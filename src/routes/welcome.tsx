@@ -33,7 +33,18 @@ function WelcomePage() {
 
   if (checking) {
     return (
-      <div style={{ position: "fixed", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "#0A0E14", color: "#FF8A00", fontFamily: "'Space Grotesk', 'Cairo', sans-serif" }}>
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "#0A0E14",
+          color: "#FF8A00",
+          fontFamily: "'Space Grotesk', 'Cairo', sans-serif",
+        }}
+      >
         جارٍ التحميل...
       </div>
     );
@@ -89,7 +100,16 @@ function WelcomePage() {
             boxShadow: "0 20px 50px rgba(255,138,0,0.45)",
           }}
         >
-          <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <svg
+            width="52"
+            height="52"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#fff"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
             <rect x="3" y="4" width="18" height="14" rx="1.5" />
             <line x1="9" y1="4" x2="9" y2="18" />
             <line x1="15" y1="4" x2="15" y2="18" />
@@ -100,7 +120,15 @@ function WelcomePage() {
         <h1 style={{ fontSize: 28, fontWeight: 800, margin: 0, letterSpacing: 0.5 }}>
           أهلاً بك{name ? `، ${name}` : ""}
         </h1>
-        <p style={{ fontSize: 15, color: "#94a3b8", marginTop: 10, marginBottom: 36, lineHeight: 1.6 }}>
+        <p
+          style={{
+            fontSize: 15,
+            color: "#94a3b8",
+            marginTop: 10,
+            marginBottom: 36,
+            lineHeight: 1.6,
+          }}
+        >
           مرحباً بك في نظام إدارة ضمان الألواح الشمسية.
           <br />
           ابدأ بإدارة مشاريعك وضماناتك بسهولة.
@@ -129,7 +157,16 @@ function WelcomePage() {
             touchAction: "manipulation",
           }}
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#fff"
+            strokeWidth="2.4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
             <path d="M3 21V10l9-7 9 7v11h-6v-7h-6v7z" />
           </svg>
           الذهاب إلى المشاريع

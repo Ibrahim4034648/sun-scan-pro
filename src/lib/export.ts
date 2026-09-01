@@ -16,8 +16,14 @@ const headers = [
 
 function toRows(records: WarrantyRecord[]) {
   return records.map((r) => [
-    r.serial, r.model, String(r.warrantyYears), r.installDate,
-    r.customer, r.project, r.location, r.notes,
+    r.serial,
+    r.model,
+    String(r.warrantyYears),
+    r.installDate,
+    r.customer,
+    r.project,
+    r.location,
+    r.notes,
   ]);
 }
 
@@ -26,7 +32,7 @@ export function exportExcel(records: WarrantyRecord[]) {
   ws["!cols"] = headers.map(() => ({ wch: 20 }));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Warranties");
-  XLSX.writeFile(wb, `solar-warranty-${new Date().toISOString().slice(0,10)}.xlsx`);
+  XLSX.writeFile(wb, `solar-warranty-${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
 export function exportJSON(records: WarrantyRecord[]) {
@@ -34,7 +40,7 @@ export function exportJSON(records: WarrantyRecord[]) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `solar-warranty-${new Date().toISOString().slice(0,10)}.json`;
+  a.download = `solar-warranty-${new Date().toISOString().slice(0, 10)}.json`;
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -47,14 +53,22 @@ export function exportPDF(records: WarrantyRecord[]) {
   doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 23);
   doc.text(`Total records: ${records.length}`, 14, 28);
   autoTable(doc, {
-    head: [["Serial","Model","Warranty","Install Date","Customer","Project","Location","Notes"]],
+    head: [
+      ["Serial", "Model", "Warranty", "Install Date", "Customer", "Project", "Location", "Notes"],
+    ],
     body: records.map((r) => [
-      r.serial, r.model, `${r.warrantyYears}y`, r.installDate,
-      r.customer, r.project, r.location, r.notes,
+      r.serial,
+      r.model,
+      `${r.warrantyYears}y`,
+      r.installDate,
+      r.customer,
+      r.project,
+      r.location,
+      r.notes,
     ]),
     startY: 34,
     styles: { fontSize: 8 },
     headStyles: { fillColor: [255, 122, 0] },
   });
-  doc.save(`solar-warranty-${new Date().toISOString().slice(0,10)}.pdf`);
+  doc.save(`solar-warranty-${new Date().toISOString().slice(0, 10)}.pdf`);
 }

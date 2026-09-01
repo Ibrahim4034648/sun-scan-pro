@@ -12,9 +12,14 @@ interface Props {
 type Draft = Omit<WarrantyRecord, "id" | "createdAt">;
 
 const empty: Draft = {
-  serial: "", model: "", warrantyYears: 25,
+  serial: "",
+  model: "",
+  warrantyYears: 25,
   installDate: new Date().toISOString().slice(0, 10),
-  customer: "", project: "", location: "", notes: "",
+  customer: "",
+  project: "",
+  location: "",
+  notes: "",
 };
 
 export function RegistrationForm({ serialFromScan, onClearScan, existing, onAdd }: Props) {
@@ -30,20 +35,24 @@ export function RegistrationForm({ serialFromScan, onClearScan, existing, onAdd 
     }
   }, [serialFromScan]);
 
-  useEffect(() => { saveDraft(form); }, [form]);
+  useEffect(() => {
+    saveDraft(form);
+  }, [form]);
 
   const duplicate = useMemo(
-    () => form.serial.trim() && existing.some((r) => r.serial.trim().toLowerCase() === form.serial.trim().toLowerCase()),
-    [form.serial, existing]
+    () =>
+      form.serial.trim() &&
+      existing.some((r) => r.serial.trim().toLowerCase() === form.serial.trim().toLowerCase()),
+    [form.serial, existing],
   );
 
   const customerSuggestions = useMemo(
     () => Array.from(new Set(existing.map((r) => r.customer).filter(Boolean))),
-    [existing]
+    [existing],
   );
   const projectSuggestions = useMemo(
     () => Array.from(new Set(existing.map((r) => r.project).filter(Boolean))),
-    [existing]
+    [existing],
   );
 
   const errors = {
@@ -78,7 +87,9 @@ export function RegistrationForm({ serialFromScan, onClearScan, existing, onAdd 
         <input
           type={type}
           value={form[k] as any}
-          onChange={(e) => setForm({ ...form, [k]: type === "number" ? Number(e.target.value) : e.target.value })}
+          onChange={(e) =>
+            setForm({ ...form, [k]: type === "number" ? Number(e.target.value) : e.target.value })
+          }
           onBlur={() => setTouched({ ...touched, [k]: true })}
           className={`w-full h-11 px-3 rounded-lg bg-input/40 border ${show ? "border-destructive" : "border-border"} focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition`}
         />
@@ -100,7 +111,9 @@ export function RegistrationForm({ serialFromScan, onClearScan, existing, onAdd 
       </div>
 
       <label className="block">
-        <span className="text-xs font-medium text-muted-foreground mb-1.5 block">الرقم التسلسلي</span>
+        <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
+          الرقم التسلسلي
+        </span>
         <div className={`relative transition ${flash ? "ring-2 ring-success rounded-lg" : ""}`}>
           <input
             value={form.serial}
@@ -113,7 +126,9 @@ export function RegistrationForm({ serialFromScan, onClearScan, existing, onAdd 
             <CheckCircle2 className="absolute right-2 top-1/2 -translate-y-1/2 h-5 w-5 text-success" />
           )}
         </div>
-        {touched.serial && errors.serial && <span className="text-xs text-destructive mt-1 block">{errors.serial}</span>}
+        {touched.serial && errors.serial && (
+          <span className="text-xs text-destructive mt-1 block">{errors.serial}</span>
+        )}
       </label>
 
       <div className="grid grid-cols-2 gap-3">
@@ -133,9 +148,13 @@ export function RegistrationForm({ serialFromScan, onClearScan, existing, onAdd 
           className={`w-full h-11 px-3 rounded-lg bg-input/40 border ${touched.customer && errors.customer ? "border-destructive" : "border-border"} focus:outline-none focus:ring-2 focus:ring-ring transition`}
         />
         <datalist id="customers">
-          {customerSuggestions.map((c) => <option key={c} value={c} />)}
+          {customerSuggestions.map((c) => (
+            <option key={c} value={c} />
+          ))}
         </datalist>
-        {touched.customer && errors.customer && <span className="text-xs text-destructive mt-1 block">{errors.customer}</span>}
+        {touched.customer && errors.customer && (
+          <span className="text-xs text-destructive mt-1 block">{errors.customer}</span>
+        )}
       </label>
 
       <label className="block">
@@ -147,7 +166,9 @@ export function RegistrationForm({ serialFromScan, onClearScan, existing, onAdd 
           className="w-full h-11 px-3 rounded-lg bg-input/40 border border-border focus:outline-none focus:ring-2 focus:ring-ring transition"
         />
         <datalist id="projects">
-          {projectSuggestions.map((p) => <option key={p} value={p} />)}
+          {projectSuggestions.map((p) => (
+            <option key={p} value={p} />
+          ))}
         </datalist>
       </label>
 

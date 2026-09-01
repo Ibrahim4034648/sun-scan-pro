@@ -5,7 +5,6 @@ import { NetworkStatus } from "@/components/NetworkStatus";
 import { installLegacyBridge } from "@/lib/legacy-bridge";
 import { bootstrapOfflineFirst } from "@/lib/sync";
 
-
 export const Route = createFileRoute("/app")({
   head: () => ({
     meta: [
@@ -28,7 +27,9 @@ function AppShell() {
   }, []);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_e, session) => {
       setAuthed(!!session);
       if (!session) navigate({ to: "/auth", search: { mode: "login" } });
     });
@@ -46,7 +47,18 @@ function AppShell() {
 
   if (checking) {
     return (
-      <div style={{ position: "fixed", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "#0F141B", color: "#FF8A00", fontFamily: "'Space Grotesk', sans-serif" }}>
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "#0F141B",
+          color: "#FF8A00",
+          fontFamily: "'Space Grotesk', sans-serif",
+        }}
+      >
         جارٍ التحميل...
       </div>
     );
@@ -65,14 +77,33 @@ function AppShell() {
         onClick={() => navigate({ to: "/" })}
         title="الرئيسية"
         style={{
-          position: "fixed", top: 10, left: 10, zIndex: 9999,
-          width: 36, height: 36, borderRadius: 10, border: "none", cursor: "pointer",
-          background: "rgba(15,20,27,0.85)", color: "#FF8A00",
-          display: "flex", alignItems: "center", justifyContent: "center",
+          position: "fixed",
+          top: 10,
+          left: 10,
+          zIndex: 9999,
+          width: 36,
+          height: 36,
+          borderRadius: 10,
+          border: "none",
+          cursor: "pointer",
+          background: "rgba(15,20,27,0.85)",
+          color: "#FF8A00",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
           boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
         }}
       >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
           <path d="M3 12l9-9 9 9M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10" />
         </svg>
       </button>

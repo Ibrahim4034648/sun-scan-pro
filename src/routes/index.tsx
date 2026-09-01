@@ -7,7 +7,10 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "SPWMS — Solar Panel Warranty Management System" },
-      { name: "description", content: "Scan, Track, Protect, Manage — نظام إدارة ضمان الألواح الشمسية" },
+      {
+        name: "description",
+        content: "Scan, Track, Protect, Manage — نظام إدارة ضمان الألواح الشمسية",
+      },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { name: "theme-color", content: "#0A0E14" },
     ],
@@ -27,7 +30,9 @@ function Welcome() {
         setReady(true);
       }
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_e, s) => {
       if (s) navigate({ to: "/welcome" });
     });
     return () => subscription.unsubscribe();
@@ -38,7 +43,18 @@ function Welcome() {
 
   if (!ready) {
     return (
-      <div style={{ position: "fixed", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "#0A0E14", color: "#FF8A00", fontFamily: "'Space Grotesk', sans-serif" }}>
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "#0A0E14",
+          color: "#FF8A00",
+          fontFamily: "'Space Grotesk', sans-serif",
+        }}
+      >
         ...
       </div>
     );
@@ -248,7 +264,16 @@ function Welcome() {
 const stroke = "#60A5FA";
 function BarcodeIcon() {
   return (
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="26"
+      height="26"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={stroke}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M4 7V5a1 1 0 0 1 1-1h2M20 7V5a1 1 0 0 0-1-1h-2M4 17v2a1 1 0 0 0 1 1h2M20 17v2a1 1 0 0 1-1 1h-2" />
       <path d="M8 8v8M11 8v8M14 8v8M17 8v8" />
     </svg>
@@ -256,7 +281,16 @@ function BarcodeIcon() {
 }
 function ShieldIcon() {
   return (
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#FF8A00" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="26"
+      height="26"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="#FF8A00"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6l8-4z" />
       <path d="m9 12 2 2 4-4" />
     </svg>
@@ -264,7 +298,16 @@ function ShieldIcon() {
 }
 function ChartIcon() {
   return (
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="26"
+      height="26"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={stroke}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <rect x="3" y="3" width="18" height="18" rx="2" />
       <path d="M8 16v-4M12 16V8M16 16v-6" />
     </svg>
@@ -272,7 +315,16 @@ function ChartIcon() {
 }
 function ReportIcon() {
   return (
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="26"
+      height="26"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={stroke}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
       <path d="M14 2v6h6M9 13h6M9 17h6" />
     </svg>
@@ -280,14 +332,32 @@ function ReportIcon() {
 }
 function ScanFrameIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="#fff"
+      strokeWidth="2.3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M3 7V5a2 2 0 0 1 2-2h2M21 7V5a2 2 0 0 0-2-2h-2M3 17v2a2 2 0 0 0 2 2h2M21 17v2a2 2 0 0 1-2 2h-2" />
     </svg>
   );
 }
 function LoginIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9CC2F5" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="#9CC2F5"
+      strokeWidth="2.3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
       <path d="M10 17l5-5-5-5M15 12H3" />
     </svg>
@@ -295,7 +365,16 @@ function LoginIcon() {
 }
 function CheckShieldIcon() {
   return (
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="26"
+      height="26"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="#22c55e"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6l8-4z" />
       <path d="m9 12 2 2 4-4" />
     </svg>

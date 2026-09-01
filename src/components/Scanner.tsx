@@ -26,7 +26,9 @@ export function Scanner({ onScan, continuous = true }: Props) {
       navigator.mediaDevices
         .enumerateDevices()
         .then((all) => {
-          const vids = all.filter((d) => d.kind === "videoinput").map((d) => ({ id: d.deviceId, label: d.label || "Camera" }));
+          const vids = all
+            .filter((d) => d.kind === "videoinput")
+            .map((d) => ({ id: d.deviceId, label: d.label || "Camera" }));
           if (vids.length) {
             setCameras(vids);
             const rear = vids.find((d) => /back|rear|environment/i.test(d.label));
@@ -35,13 +37,17 @@ export function Scanner({ onScan, continuous = true }: Props) {
         })
         .catch(() => {});
     }
-    return () => { void stop(); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => {
+      void stop();
+    };
   }, []);
 
   const ensurePermission = async (): Promise<boolean> => {
     if (typeof window === "undefined") return false;
-    const isSecure = window.isSecureContext || location.hostname === "localhost" || location.hostname === "127.0.0.1";
+    const isSecure =
+      window.isSecureContext ||
+      location.hostname === "localhost" ||
+      location.hostname === "127.0.0.1";
     if (!isSecure) {
       setError("الكاميرا تحتاج اتصالاً آمناً (HTTPS). افتح الموقع عبر https://");
       return false;
@@ -58,7 +64,9 @@ export function Scanner({ onScan, continuous = true }: Props) {
       // Refresh device list now that labels are available.
       try {
         const all = await navigator.mediaDevices.enumerateDevices();
-        const vids = all.filter((d) => d.kind === "videoinput").map((d) => ({ id: d.deviceId, label: d.label || "Camera" }));
+        const vids = all
+          .filter((d) => d.kind === "videoinput")
+          .map((d) => ({ id: d.deviceId, label: d.label || "Camera" }));
         if (vids.length) {
           setCameras(vids);
           if (!cameraId) {
@@ -90,10 +98,13 @@ export function Scanner({ onScan, continuous = true }: Props) {
       const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
       const o = ctx.createOscillator();
       const g = ctx.createGain();
-      o.frequency.value = 880; o.connect(g); g.connect(ctx.destination);
+      o.frequency.value = 880;
+      o.connect(g);
+      g.connect(ctx.destination);
       g.gain.setValueAtTime(0.15, ctx.currentTime);
       g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
-      o.start(); o.stop(ctx.currentTime + 0.15);
+      o.start();
+      o.stop(ctx.currentTime + 0.15);
     } catch {}
     if ("vibrate" in navigator) navigator.vibrate(60);
   };
@@ -102,7 +113,10 @@ export function Scanner({ onScan, continuous = true }: Props) {
     setError(null);
     setStatus("starting");
     const ok = await ensurePermission();
-    if (!ok) { setStatus("error"); return; }
+    if (!ok) {
+      setStatus("error");
+      return;
+    }
     try {
       const html5 = new Html5Qrcode(containerId, {
         formatsToSupport: [
@@ -129,7 +143,7 @@ export function Scanner({ onScan, continuous = true }: Props) {
           onScan(decoded);
           if (!continuous) void stop();
         },
-        () => {}
+        () => {},
       );
       setStatus("scanning");
     } catch (e: any) {
@@ -146,7 +160,10 @@ export function Scanner({ onScan, continuous = true }: Props) {
     const s = scannerRef.current;
     scannerRef.current = null;
     if (s) {
-      try { await s.stop(); await s.clear(); } catch {}
+      try {
+        await s.stop();
+        await s.clear();
+      } catch {}
     }
     setStatus("idle");
     setTorch(false);
@@ -168,13 +185,19 @@ export function Scanner({ onScan, continuous = true }: Props) {
     const idx = cameras.findIndex((c) => c.id === cameraId);
     const next = cameras[(idx + 1) % cameras.length];
     setCameraId(next.id);
-    if (status === "scanning") { await stop(); setTimeout(() => start(), 100); }
+    if (status === "scanning") {
+      await stop();
+      setTimeout(() => start(), 100);
+    }
   };
 
   return (
     <div className="rounded-2xl bg-card shadow-card overflow-hidden border">
       <div className="relative aspect-square bg-secondary/95">
-        <div id={containerId} className="absolute inset-0 [&_video]:object-cover [&_video]:w-full [&_video]:h-full" />
+        <div
+          id={containerId}
+          className="absolute inset-0 [&_video]:object-cover [&_video]:w-full [&_video]:h-full"
+        />
         {status !== "scanning" && (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-secondary-foreground gap-3 p-6 text-center">
             {status === "starting" ? (
@@ -185,7 +208,11 @@ export function Scanner({ onScan, continuous = true }: Props) {
             <p className="text-sm opacity-80">
               {status === "starting" ? "جارٍ تشغيل الكاميرا..." : "اضغط لبدء المسح الضوئي"}
             </p>
-            {error && <p className="text-xs text-destructive bg-destructive/10 px-3 py-1.5 rounded-md">{error}</p>}
+            {error && (
+              <p className="text-xs text-destructive bg-destructive/10 px-3 py-1.5 rounded-md">
+                {error}
+              </p>
+            )}
           </div>
         )}
         {status === "scanning" && (

@@ -38,13 +38,19 @@ export function loadDraft<T>(): T | null {
   try {
     const raw = localStorage.getItem(DRAFT_KEY);
     return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 export function saveDraft<T>(draft: T) {
-  try { localStorage.setItem(DRAFT_KEY, JSON.stringify(draft)); } catch {}
+  try {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+  } catch {}
 }
 
 export function clearDraft() {
-  try { localStorage.removeItem(DRAFT_KEY); } catch {}
+  try {
+    localStorage.removeItem(DRAFT_KEY);
+  } catch {}
 }

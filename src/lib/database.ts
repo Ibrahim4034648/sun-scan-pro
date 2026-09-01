@@ -501,9 +501,7 @@ class DatabaseService {
         r.notes,
         r.installDate,
         r.stringGroup,
-      ].some((v) =>
-        (v ?? "").toString().toLowerCase().includes(q),
-      ),
+      ].some((v) => (v ?? "").toString().toLowerCase().includes(q)),
     );
   }
 
