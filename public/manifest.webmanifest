@@ -1,0 +1,12 @@
+{
+  "name": "نظام إدارة ضمان الألواح الشمسية",
+  "short_name": "SPWMS",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0F141B",
+  "theme_color": "#FF8A00",
+  "icons": []
+}
