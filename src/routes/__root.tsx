@@ -141,7 +141,14 @@ function RootComponent() {
 
   useEffect(() => {
     void requestNativePermissions();
+    if (import.meta.env.PROD && "serviceWorker" in navigator) {
+      navigator.serviceWorker
+        .register("/sw.js")
+        .catch((error) => console.warn("[offline] service worker not registered", error));
+    }
   }, []);
+
+
 
   return (
     <QueryClientProvider client={queryClient}>
