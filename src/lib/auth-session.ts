@@ -21,9 +21,9 @@ function readCachedSession(): Session | null {
       if (!key || !/^sb-.*-auth-token$/.test(key)) continue;
       const raw = localStorage.getItem(key);
       if (!raw) continue;
-      const parsed = JSON.parse(raw) as Session | { currentSession?: Session };
-      const session = "currentSession" in parsed ? parsed.currentSession : parsed;
-      if (session?.user) return session as Session;
+      const parsed = JSON.parse(raw) as Partial<Session> & { currentSession?: Session };
+      const session = parsed.currentSession ?? (parsed as Session);
+      if (session && session.user) return session;
     }
   } catch {
     // corrupted / unavailable storage — treat as signed out
