@@ -30,12 +30,14 @@ function AppShell() {
   useEffect(() => {
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_e, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
         setAuthed(true);
         return;
       }
-      if (isDeviceOffline()) return;
+      // Only an explicit sign-out ends the session; missing sessions while
+      // offline / during token refresh must not log the user out.
+      if (event !== "SIGNED_OUT") return;
       setAuthed(false);
       navigate({ to: "/auth", search: { mode: "login" } });
     });
