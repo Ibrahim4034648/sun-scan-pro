@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getSessionSafe, isDeviceOffline } from "@/lib/auth-session";
 import { NetworkStatus } from "@/components/NetworkStatus";
 import { installLegacyBridge } from "@/lib/legacy-bridge";
 import { bootstrapOfflineFirst } from "@/lib/sync";
@@ -29,16 +30,22 @@ function AppShell() {
   useEffect(() => {
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_e, session) => {
-      setAuthed(!!session);
-      if (!session) navigate({ to: "/auth", search: { mode: "login" } });
-    });
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) {
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session) {
         setAuthed(true);
-        setChecking(false);
-      } else {
-        setChecking(false);
+        return;
+      }
+      // Only an explicit sign-out ends the session; missing sessions while
+      // offline / during token refresh must not log the user out.
+      if (event !== "SIGNED_OUT") return;
+      setAuthed(false);
+      navigate({ to: "/auth", search: { mode: "login" } });
+    });
+    void getSessionSafe().then((session) => {
+      setChecking(false);
+      if (session) {
+        setAuthed(true);
+      } else if (!isDeviceOffline()) {
         navigate({ to: "/auth", search: { mode: "login" } });
       }
     });

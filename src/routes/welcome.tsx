@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getSessionSafe } from "@/lib/auth-session";
 
 export const Route = createFileRoute("/welcome")({
   head: () => ({
@@ -20,13 +21,13 @@ function WelcomePage() {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (!data.session) {
+    void getSessionSafe().then((session) => {
+      if (!session) {
         navigate({ to: "/" });
         return;
       }
-      const meta = data.session.user.user_metadata as { display_name?: string } | null;
-      setName(meta?.display_name || data.session.user.email?.split("@")[0] || "");
+      const meta = session.user.user_metadata as { display_name?: string } | null;
+      setName(meta?.display_name || session.user.email?.split("@")[0] || "");
       setChecking(false);
     });
   }, [navigate]);

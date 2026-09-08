@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getSessionSafe } from "@/lib/auth-session";
 import heroAsset from "@/assets/spwms-hero-v2.png.asset.json";
 
 export const Route = createFileRoute("/")({
@@ -23,8 +24,8 @@ function Welcome() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) {
+    void getSessionSafe().then((session) => {
+      if (session) {
         navigate({ to: "/welcome" });
       } else {
         setReady(true);
