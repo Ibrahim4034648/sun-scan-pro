@@ -32,6 +32,26 @@ function AuthPage() {
     });
   }, [navigate]);
 
+  const handleGoogle = async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: window.location.origin,
+      });
+      if (result.error) {
+        setError("تعذر تسجيل الدخول بواسطة Google — حاول مرة أخرى");
+        return;
+      }
+      if (result.redirected) return;
+      navigate({ to: "/welcome" });
+    } catch {
+      setError("تعذر تسجيل الدخول بواسطة Google — حاول مرة أخرى");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -133,6 +153,28 @@ function AuthPage() {
           >
             حساب جديد
           </button>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleGoogle}
+          disabled={loading}
+          className="w-full py-3 rounded-lg font-bold flex items-center justify-center gap-3 mb-4 transition-all disabled:opacity-60"
+          style={{ background: "#fff", border: "1.5px solid #e2e8f0", color: "#0F141B", fontSize: "15px" }}
+        >
+          <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true">
+            <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.6 30.2.5 24 .5 14.6.5 6.5 5.9 2.6 13.8l7.8 6.1C12.3 13.5 17.6 9.5 24 9.5z"/>
+            <path fill="#4285F4" d="M46.5 24c0-1.6-.1-3.1-.4-4.5H24v9h12.6c-.6 3-2.3 5.5-4.8 7.2l7.6 5.9C43.8 37.4 46.5 31.2 46.5 24z"/>
+            <path fill="#FBBC05" d="M10.4 28.1c-.5-1.5-.8-3-.8-4.6s.3-3.1.8-4.6l-7.8-6.1C1 16.1 0 19.9 0 23.5s1 7.4 2.6 10.7l7.8-6.1z"/>
+            <path fill="#34A853" d="M24 47.5c6.2 0 11.5-2 15.4-5.6l-7.6-5.9c-2.1 1.4-4.8 2.3-7.8 2.3-6.4 0-11.7-4-13.6-9.6l-7.8 6.1C6.5 42.1 14.6 47.5 24 47.5z"/>
+          </svg>
+          المتابعة بواسطة Google
+        </button>
+
+        <div className="flex items-center gap-3 mb-4">
+          <div className="flex-1 h-px" style={{ background: "#e2e8f0" }} />
+          <span className="text-xs" style={{ color: "#94a3b8" }}>أو</span>
+          <div className="flex-1 h-px" style={{ background: "#e2e8f0" }} />
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
