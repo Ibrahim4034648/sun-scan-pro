@@ -1837,19 +1837,22 @@ function refreshReportPreview() {
         ' · المشروع: ' + escapeHtml(m.project) + ' · الفترة: ' + escapeHtml(m.rangeLabel) + '</div>';
 
     if (!m.body.length) {
-        html += '<div style="padding:14px;text-align:center;opacity:.7">لا توجد بيانات مطابقة للفلاتر والفترة المحددة</div>';
+        html += '<div class="empty-state" style="padding:14px;text-align:center;opacity:.7"><i class="fas fa-inbox"></i><p>لا توجد بيانات مطابقة للفلاتر والفترة المحددة</p></div>';
     } else {
-        html += '<table style="width:100%;border-collapse:collapse;font-size:11px"><thead><tr>' +
-            cols.map(c => '<th style="border:1px solid rgba(255,255,255,.12);background:' + accent +
-                ';color:#fff;padding:5px 6px;white-space:nowrap">' + escapeHtml(c.label) + '</th>').join('') +
+        // Same look & feel as the scanned-panels records table
+        html += '<div class="table-container"><table><thead><tr>' +
+            cols.map(c => '<th style="cursor:default">' + escapeHtml(c.label) + '</th>').join('') +
             '</tr></thead><tbody>';
-        rows.forEach((r, i) => {
-            html += '<tr style="background:' + (i % 2 ? 'rgba(255,255,255,.04)' : 'transparent') + '">' +
-                cols.map(c => '<td style="border:1px solid rgba(255,255,255,.1);padding:5px 6px;text-align:' +
-                    (c.align === 'right' ? 'right' : 'center') + '">' +
-                    escapeHtml(String(r[c.key] == null ? '' : r[c.key])) + '</td>').join('') + '</tr>';
+        rows.forEach((r) => {
+            const dup = r.serial && typeof duplicateSerials !== 'undefined' && duplicateSerials.has(String(r.serial));
+            html += '<tr' + (dup ? ' class="duplicate"' : '') + '>' +
+                cols.map(c => {
+                    const v = escapeHtml(String(r[c.key] == null || r[c.key] === '' ? '-' : r[c.key]));
+                    if (c.key === 'serial') return '<td class="serial-cell"><strong>' + v + '</strong></td>';
+                    return '<td style="text-align:' + (c.align === 'right' ? 'right' : 'center') + '">' + v + '</td>';
+                }).join('') + '</tr>';
         });
-        html += '</tbody></table>';
+        html += '</tbody></table></div>';
         if (m.body.length > rows.length) {
             html += '<div style="font-size:11px;opacity:.7;margin-top:6px">… و ' + (m.body.length - rows.length) + ' صف إضافي في الملف النهائي</div>';
         }
