@@ -1945,8 +1945,9 @@ function _getReportMeta(opts) {
     };
     const fEl = (id) => { if (!o.useFilters) return ''; const el = document.getElementById(id); return el ? el.value : ''; };
 
-    // Scope rows to active filters + selected date range
-    const scoped = panels.filter(p =>
+    // Scope rows to the currently selected project, then active filters + date range
+    const base = (typeof projectPanels === 'function') ? projectPanels() : panels;
+    const scoped = base.filter(p =>
         (!fEl('filterCustomer') || p.customer === fEl('filterCustomer')) &&
         (!fEl('filterProject')  || p.project  === fEl('filterProject'))  &&
         (!fEl('filterLocation') || p.location === fEl('filterLocation')) &&
@@ -1954,8 +1955,10 @@ function _getReportMeta(opts) {
         _inRange(p, o.from, o.to)
     );
     const rows = scoped;
-    const customer = fEl('filterCustomer') || mostCommon('customer', rows) || '—';
-    const project  = fEl('filterProject')  || mostCommon('project', rows)  || '—';
+    const curProjName = (typeof currentProject !== 'undefined' && currentProject && currentProject.name) ? String(currentProject.name).trim() : '';
+    const curProjCustomer = (typeof currentProject !== 'undefined' && currentProject && currentProject.customer) ? String(currentProject.customer).trim() : '';
+    const customer = fEl('filterCustomer') || curProjCustomer || mostCommon('customer', rows) || '—';
+    const project  = curProjName || fEl('filterProject')  || mostCommon('project', rows)  || '—';
     const location = fEl('filterLocation') || mostCommon('location', rows) || '—';
     const installDate = fEl('filterDate')  || mostCommon('date', rows)     || new Date().toLocaleDateString('ar-SA');
 
